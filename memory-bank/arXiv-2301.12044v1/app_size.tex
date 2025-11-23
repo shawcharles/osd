@@ -1,0 +1,195 @@
+\section{Choosing supergeo sizes}\label{sec:size}
+In this section we present additional theoretical results that speak to the robustness properties of randomized designs. In the spirit of \citet{banerjee2020theory}, we want to capture a scenario in which an approach to designing an experiment is presented to a potentially adversarial audience. If the design is ``over-optimized''---for example, when there are two large supergeos and only two possible treatment assignments---the adversary can easily come up with a model that compromises the experimental results. For instance, they can suggest the presence of an unobserved confounder that differs between the two supergeos and that is correlated with the outcome variable. When the treatment assignment is realized as a result of many independent random draws---as is the case with many smaller supergeo pairs---the job of the adversary becomes substantially more complicated.
+
+We also present additional empirical results that illustrate the benefits of using the maximum allowed supergeo pair size within the range of $\{3,4,5\}$.
+
+%\subsection{Adversarial perturbation model}\label{sec:adversarial_model}
+%We first provide some intuitions about adversarial perturbations. Suppose we were to divide all the geos into two supergeos to miminize the variance in Eq.~\eqref{eq:variance}, then the treatment group and the control group are completely fixed (up to switching between treatment and control). If some bad event takes place on geos within the same group, e.g., an earthquake or a heat wave that affects a large portion of the country, then this bad event could corrupt our data significantly. The effect of such bad events could be mitigated if there are more pairs, because the random treatment and control assignments within different pairs could cancel out with each other. We capture this intuition in the following adversarial perturbation model.
+
+\paragraph{Model.}
+We follow the notation from Section~\ref{sec:homo_model} and maintain the fixed budget and the homogeneous $\theta$ assumptions. We modify the linear outcome model in Assumption~\ref{ass:linear} to include an adversarial noise $\delta_g$:
+\[
+R_g = \theta \cdot S_g + Z_g + \delta_g.
+\]
+\begin{itemize}
+    \item The adversary picks the values of per-geo noises $\delta_g$ after observing the allocation of geos to supergeo pairs $\{(G_{k,+}, G_{k,-})\}_{k=1}^K$, but \emph{before} the realization of a particular random treatment assignment.
+    %\item However, the adversary cannot access the random assignments to treatment and control. 
+    \item The noise $\delta_g$ is bounded by $|\delta_g| \leq \eta \cdot Z_g$ for some constant $\eta$.
+\end{itemize}
+
+
+\paragraph{Expectation.}
+Following an argument similar to that of Section~\ref{sec:homo_model} and defining $\delta_G := \sum_{g \in G} \delta_g$ for any $G \subseteq \mathcal{G}$, we have
+\begin{align*}
+    \hat{\theta} = &~ \frac{\sum_{g \in \mathcal{T}} R_g - \sum_{g' \in \mathcal{C}} R_{g'}}{\sum_{g \in \mathcal{T}} S_g - \sum_{g' \in \mathcal{C}} S_{g'}} \notag \\
+    %= &~ \frac{\sum_{i \in \mathcal{T}} (\theta \cdot S_g + Z_g + \epsilon_g) - \sum_{g' \in \mathcal{C}} (\theta \cdot S_{g'} + Z_{g'} + \epsilon_{g'})}{\sum_{i \in \mathcal{T}} S_g - \sum_{g' \in \mathcal{C}} S_{g'}} \\
+    = &~ \theta + \frac{\sum_{g \in \mathcal{T}} (Z_g + \delta_g) - \sum_{g' \in \mathcal{C}} (Z_{g'} + \delta_{g'})}{\sum_{g \in \mathcal{T}} S_g - \sum_{g' \in \mathcal{C}} S_{g'}} \notag \\
+    = &~ \theta + \frac{1}{B} \cdot \sum_{k} A_{k} \cdot (Z_{G_{k,+}} + \delta_{G_{k,+}} - Z_{G_{k,-}} - \delta_{G_{k,-}}).
+\end{align*}
+Since the random draws $A_{k}$'s are independent of the noises, $\delta_g$'s, the empirical estimator, $\hat{\theta}$, is still unbiased regardless of the values of $\delta_g$'s.
+
+
+\paragraph{Variance.}
+For any supergeo design $\{(G_{k,+}, G_{k,-})\}_{k=1}^K$, estimator $\hat{\theta}$ is a function of $\delta_g$'s and its variance is:
+\begin{align*}
+    var[\hat{\theta}(\{\delta_g\})] = &~ \frac{1}{B^2} \cdot \E\Big[ \Big( \sum_{k} A_{k} \cdot (Z_{G_{k,+}} + \delta_{G_{k,+}} - Z_{G_{k,-}} - \delta_{G_{k,-}}) \Big)^2 \Big] \\
+    = &~ \frac{1}{B^2} \cdot \sum_{k} (Z_{G_{k,+}} + \delta_{G_{k,+}} - Z_{G_{k,-}} - \delta_{G_{k,-}})^2,
+\end{align*}
+where the second equality follows from that the fact that random draws $A_{k}$'s are independent of the noises $\delta_g$'s as well as independent from each other.
+
+Let's compute the largest possible variance that can be achieved by the adversary picking the values of $\delta_g$'s. Consider any supergeo pair $(G_{k,+}, {G_{k,-}})$, and assume w.l.o.g.~that $Z_{G_{k,+}} \geq Z_{G_{k,-}}$. The largest value of the variance is realized when the adversary picks $\delta_{G_{k,+}} = \eta \cdot Z_{G_{k,+}}$ and $\delta_{G_{k,-}} = - \eta \cdot Z_{G_{k,-}}$:
+\begin{align}\label{eq:variance_adversarial}
+    \max_{\{\delta_g\}}\ var[\hat{\theta}(\{\delta_g\})] = &~ \max_{\{\delta_g\}}\ \frac{1}{B^2} \cdot \sum_{k} (Z_{G_{k,+}} + \delta_{G_{k,+}} - Z_{G_{k,-}} - \delta_{G_{k,-}})^2 \notag \\
+    = &~ \frac{1}{B^2} \cdot \sum_{k} ( |Z_{G_{k,+}} - Z_{G_{k,-}}| + \eta \cdot Z_{G_{k,+}} + \eta \cdot Z_{G_{k,-}})^2 \notag \\ 
+    = &~ \frac{1}{B^2} \cdot \sum_{k} \Big( (Z_{G_{k,+}} - Z_{G_{k,-}})^2 + 2 \eta \cdot |Z_{G_{k,+}}^2 - Z_{G_{k,-}}^2| + \eta^2 \cdot (Z_{G_{k,+}} + Z_{G_{k,-}})^2 \Big).
+\end{align}
+Importantly, the third term, $\eta^2 \cdot (Z_{G_{k,+}} + Z_{G_{k,-}})^2$, penalizes supergeo pairs that are too large. This motivates the decision to construct many smaller supergeo pairs.
+
+\subsection{Empirical results}\label{sec:appendix-B-eval}
+In this section we compare supergeo designs with different maximum allowed sizes of supergeo pairs. As discussed in Section~\ref{sec:supergeo_algo}, finding the optimal supergeo design can be computationally expensive especially when the subset size is large. To mitigate this issue, we work with a synthetic dataset consisting of 40 geos. We generate the synthetic data in the same way as in Section~5.1 of \cite{chen2021trimmed}.  %\Shunhua{Do we need to describe the synthetic model in details here?}\Aiyou{I think the reference to Sec-5.1 should be good.}
+
+\paragraph{Pretest loss vs.~test loss.}
+Figure~\ref{fig:sync_40_loss} shows the loss from Eq.~\eqref{eq:loss} as a function of the maximum allowed size of a supergeo pair which varies from 2 to 8. Recall that the loss is proportional to the variance of the estimated $\hat{\theta}$. When computing the loss, we approximate $Z_g$ either by the pretest response $R_g^{\mathrm{pre}}$ or the test response $R_g^{\mathrm{test}}$. Even though a larger subset size is effective at decreasing the pretest loss (i.e., the training loss), the test loss reaches the minimum when the subset size is 4 and remains roughly the same when we increase it further. This confirms our intuition that a large subset size leads to overfitting to the pretest data.%, and it is less effective to reduce the variance in the test phase.
+\begin{figure}[!h]
+\centering
+\includegraphics[width=0.5\textwidth]{figs/synthetic_clr21_40/sync_40_loss.pdf}
+
+\medskip
+\raggedright
+{\small\textit{Note}: Reporting the loss on the pretest data, $\sum_{k=1}^K (R_{G_{k,+}}^{\mathrm{pre}} - R_{G_{k,-}}^{\mathrm{pre}})^2$, and the loss on the test data $\sum_{k=1}^K (R_{G_{k,+}}^{\mathrm{test}} - R_{G_{k,-}}^{\mathrm{test}})^2$, as the subset size varies from 2 to 8. The loss is shown using a log scale.}
+\caption{Loss on the pretest and test data.}
+\label{fig:sync_40_loss}
+\end{figure}
+
+\paragraph{No adversarial noise.} We repeat the evaluations from Section~\ref{sec:evaluation_homogeneous} with $\theta_g = 1$ for all $g$ on the synthetic dataset with 40 geos. The results are shown in Table~\ref{tab:sync_40_geo}. We observe that the RMSE reaches the minimum when the subset size is 4 or 3 (depending on the estimator used) and does not decrease further when the subset size grows. 
+\begin{table}[!h]
+\centering
+\begin{tabular}{l|c|cc|cc}
+    \toprule
+    & \multirow{2}{*}{\# pairs} & \multicolumn{2}{c|}{Empirical ($\hat{\theta}$)} & \multicolumn{2}{c}{Trimmed ($\hat{\theta}^{\mathrm{trim}}$)} \\
+    \cmidrule(r){3-6}
+    & & RMSE & Cov. & RMSE & Cov. \\
+    \midrule
+    Size 2 & 20 & $0.554$ & $76\%$ & $0.326$ & $70\%$ \\
+    Size 3 & 14 & $0.163$ & $85\%$ & $\mathbf{0.059}$ & $76\%$ \\
+    Size 4 & 10 & $\mathbf{0.100}$ & $76\%$ & $0.099$ & $62\%$ \\
+    Size 5 & 8 & $0.104$ & $76\%$ & $0.105$ & $67\%$ \\
+    Size 6 & 7 & $0.165$ & $75\%$ & $0.139$ & $63\%$ \\
+    Size 7 & 6 & $0.105$ & $78\%$ & $0.114$ & $75\%$ \\
+    Size 8 & 5 & $0.113$ & $69\%$ & $0.120$ & $63\%$ \\
+    \bottomrule
+  \end{tabular}
+  
+\medskip
+\raggedright
+{\small\textit{Note}: The coverage values (abbreviated as Cov.) are shown for nominally 80\% confidence intervals for supergeo designs with subset sizes from 2 to 8 on a synthetic dataset with 40 geos. We show the results of both the empirical estimator $\hat{\theta}$ and the trimmed match estimator $\hat{\theta}^{\mathrm{trim}}$. The confidence intervals are computed using the approximation by Student's $t$-distribution described in Section~5.2 of \citet{chen2022robust} (see Appendix~\ref{sec:inference}). We do not report the bias as it is close to zero (as is usually the case with homogeneous $\theta_g$'s).}
+\caption{Root-mean-square errors (RMSE) of the estimates and the coverage.}
+\label{tab:sync_40_geo}
+\end{table}
+
+\paragraph{With adversarial noise.}
+We repeat the analysis with the adversarial noise added to the outcomes. Given a supergeo design $\{G_{k,+}, G_{k,-}\}_{k=1}^K$ and w.l.o.g.~assuming that $Z_{G_{k,+}} \geq Z_{G_{k,-}}$ for all $k$, we change $Z_{G_{k,+}}$ to $(1 + \eta) \cdot Z_{G_{k,+}}$ and change $Z_{G_{k,-}}$ to $(1 - \eta) \cdot Z_{G_{k,-}}$. We use $\eta = 0.05$ or $0.07$ in the evaluations.
+
+The RMSEs of the empirical estimator are reported in Table~\ref{tab:sync_40_geo_adversarial}. We see that at first the RMSE declines as we increase the subset size which is due to the first two terms, $\sum_k (Z_{G_{k,+}} - Z_{G_{k,-}})^2 + 2 \eta \sum_k |Z_{G_{k,+}}^2 - Z_{G_{k,-}}^2|$, in the variance in Eq.~\eqref{eq:variance_adversarial}---the variance is lower when the pairs are better matched. However, as we further increase the subset size, the RMSE begins to grow due to the third term, $\eta^2 \cdot \sum_k (Z_{G_{k,+}} + Z_{G_{k,-}})^2$, which increases when the number of pairs decreases. In Figure~\ref{fig:sync_40_geo_adversarial} we include the histograms of the estimates $\hat{\theta}$ when $\eta = 0.07$.
+% \begin{table}[!h]
+% \centering
+% \begin{tabular}{l|cc}
+%     \toprule
+%     & RMSE & Cov.  \\
+%     \midrule
+%     Size 2 & $0.90$ & $76\%$ \\
+%     Size 3 & $0.55$ & $77\%$ \\
+%     Size 4 & $0.52$ & $77\%$ \\
+%     Size 5 & $0.55$ & $76\%$ \\
+%     Size 6 & $0.63$ & $75\%$ \\
+%     Size 7 & $0.61$ & $78\%$ \\
+%     Size 8 & $0.65$ & $76\%$ \\
+%     \bottomrule
+%   \end{tabular}
+% \caption{Root-mean-square errors of the estimates $\hat{\theta}$ and the coverage of nominally 80\% confidence intervals of supergeo designs with subset sizes from 2 to 8 under adversarial perturbations.}
+% \label{tab:sync_40_geo_adversarial}
+% \end{table}
+% \begin{table}[!h]
+% \centering
+% \begin{tabular}{l|cc}
+%     \toprule
+%     & RMSE & Cov.  \\
+%     \midrule
+%     Size 2 & $0.79$ & $76\%$ \\
+%     Size 3 & $0.44$ & $76\%$ \\
+%     Size 4 & $0.39$ & $78\%$ \\
+%     Size 5 & $0.42$ & $77\%$ \\
+%     Size 6 & $0.50$ & $75\%$ \\
+%     Size 7 & $0.47$ & $78\%$ \\
+%     Size 8 & $0.50$ & $75\%$ \\
+%     \bottomrule
+%   \end{tabular}
+% \caption{Root-mean-square errors of the estimates $\hat{\theta}$ and the coverage of nominally 80\% confidence intervals of supergeo designs with subset sizes from 2 to 8 under adversarial perturbations.}
+% \label{tab:sync_40_geo_adversarial}
+% \end{table}
+
+\begin{table}[!h]
+\centering
+\begin{tabular}{l|c|c}
+    \toprule
+    & $\eta = 0.05$ & $\eta = 0.07$ \\
+    \midrule
+    Size 2 & $0.79$ & $0.90$ \\
+    Size 3 & $0.44$ & $0.55$ \\
+    Size 4 & $\mathbf{0.39}$ & $\mathbf{0.52}$ \\
+    Size 5 & $0.42$ & $0.55$ \\
+    Size 6 & $0.50$ & $0.63$ \\
+    Size 7 & $0.47$ & $0.61$ \\
+    Size 8 & $0.50$ &$0.65$ \\
+    \bottomrule
+  \end{tabular}
+  
+\medskip
+\raggedright
+{\small\textit{Note}: Reporting the RMSE of the empirical estimator, $\hat{\theta}$, in the adversarial perturbation model where $\eta = 0.05$ or $0.07$. We do not report the bias as it is close to zero (as is usually the case with homogeneous $\theta_g$'s).}
+\caption{Root-mean-square errors (RMSE) of the empirical estimator.
+%Root-mean-square errors (RMSE) of the estimates and the coverage (abbreviated as Cov.) of nominally 80\% confidence intervals of supergeo designs with subset sizes from 2 to 8 under adversarial perturbations. We use the empirical estimator $\hat{\theta}$.
+}
+\label{tab:sync_40_geo_adversarial}
+\end{table}
+
+
+
+% \begin{table}[!h]
+% \centering
+% \begin{tabular}{l|cc|cc}
+%     \toprule
+%     & \multicolumn{2}{c|}{$\eta = 0.05$} & \multicolumn{2}{c}{$\eta = 0.07$} \\
+%     \cmidrule(r){2-5}
+%     & RMSE & Cov. & RMSE & Cov. \\
+%     \midrule
+%     Size 2 & $0.79$ & $76\%$ & $0.90$ & $76\%$ \\
+%     Size 3 & $0.44$ & $76\%$ & $0.55$ & $77\%$ \\
+%     Size 4 & $0.39$ & $78\%$ & $0.52$ & $77\%$ \\
+%     Size 5 & $0.42$ & $77\%$ & $0.55$ & $76\%$ \\
+%     Size 6 & $0.50$ & $75\%$ & $0.63$ & $75\%$ \\
+%     Size 7 & $0.47$ & $78\%$ & $0.61$ & $78\%$ \\
+%     Size 8 & $0.50$ & $75\%$ &$0.65$ & $76\%$ \\
+%     \bottomrule
+%   \end{tabular}
+% \caption{Root-mean-square errors (RMSE) of the estimates and the coverage (abbreviated as Cov.) of nominally 80\% confidence intervals of supergeo designs with subset sizes from 2 to 8 under adversarial perturbations. We use the empirical estimator $\hat{\theta}$.
+% }
+% \label{tab:sync_40_geo_adversarial}
+% \end{table}
+
+\begin{figure*}[!ht]
+\centering
+\subfigure[Size 2]{\label{fig:size_2_adv}{\includegraphics[width=0.23\textwidth]{figs/synthetic_clr21_40_large_num_pairs_20/heavy_up_1e7_adv_007.pdf}}}
+\subfigure[Size 3]{\label{fig:size_3_adv}{\includegraphics[width=0.23\textwidth]{figs/synthetic_clr21_40_large_num_pairs_14/heavy_up_1e7_adv_007.pdf}}}
+\subfigure[Size 4]{\label{fig:size_4_adv}{\includegraphics[width=0.23\textwidth]{figs/synthetic_clr21_40_large_num_pairs_10/heavy_up_1e7_adv_007.pdf}}}
+\subfigure[Size 5]{\label{fig:size_5_adv}{\includegraphics[width=0.23\textwidth]{figs/synthetic_clr21_40_large_num_pairs_8/heavy_up_1e7_adv_007.pdf}}}
+\subfigure[Size 6]{\label{fig:size_6_adv}{\includegraphics[width=0.23\textwidth]{figs/synthetic_clr21_40_large_num_pairs_7/heavy_up_1e7_adv_007.pdf}}}
+\subfigure[Size 7]{\label{fig:size_7_adv}{\includegraphics[width=0.23\textwidth]{figs/synthetic_clr21_40_large_num_pairs_6/heavy_up_1e7_adv_007.pdf}}}
+\subfigure[Size 8]{\label{fig:size_8_adv}{\includegraphics[width=0.23\textwidth]{figs/synthetic_clr21_40_large_num_pairs_5/heavy_up_1e7_adv_007.pdf}}}
+
+\medskip
+\centering
+{\small\textit{Note}: The value of the perturbation parameter is $\eta = 0.07$.}
+\caption{The histogram of the estimates $\hat{\theta}$ under adversarial perturbation.}
+\label{fig:sync_40_geo_adversarial}
+\end{figure*}

@@ -1,0 +1,49 @@
+% === Optimized Supergeo Design - Simplified Preamble ===
+% Cleaned up: removed ~200 lines of unused macros
+
+% --- Page Setup ---
+\makeatletter
+\def\ps@pprintTitle{%
+ \let\@oddhead\@empty
+ \let\@evenhead\@empty
+ \def\@oddfoot{}%
+ \let\@evenfoot\@oddfoot}
+\makeatother
+
+% --- Essential Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{setspace}
+\setstretch{1.15}
+
+% --- Figures and Tables ---
+\usepackage[capposition=top]{floatrow}
+\usepackage{graphicx}
+\usepackage{booktabs}
+
+% --- Mathematics ---
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+
+% --- Bibliography and References ---
+\usepackage{natbib}
+\usepackage[capitalize,noabbrev]{cleveref}
+\usepackage{url}
+
+% --- Math Shorthands (only what's used in main.tex) ---
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\cG}{\mathcal{G}}
+\newcommand{\cC}{\mathcal{C}}
+\newcommand{\cP}{\mathcal{P}}
+\newcommand{\cX}{\mathcal{X}}
+\newcommand{\cN}{\mathcal{N}}
+\newcommand{\cO}{\mathcal{O}}
+
+% --- Theorem Environments ---
+\theoremstyle{definition}
+\newtheorem{assumption}{Assumption}[section]
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{lemma}{Lemma}[section]

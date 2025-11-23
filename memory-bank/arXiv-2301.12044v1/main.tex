@@ -1,0 +1,229 @@
+%%\documentclass{article}
+\pdfoutput=1
+\documentclass[12pt,fleqn]{article}
+\setlength{\topmargin}{-0.25in}
+\setlength{\textheight}{8.75in}
+\setlength{\evensidemargin}{-0.125in}
+\setlength{\oddsidemargin}{-0.125in}
+\setlength{\textwidth}{6.75in}
+\linespread{1.5}
+
+% if you need to pass options to natbib, use, e.g.:
+%     \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading neurips_2021
+
+% ready for submission
+%\usepackage{neurips_2021}
+
+% to compile a preprint version, e.g., for submission to arXiv, add add the
+% [preprint] option:
+%     \usepackage[preprint]{neurips_2021}
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+%     \usepackage[final]{neurips_2021}
+
+% to avoid loading the natbib package, add option nonatbib:
+%    \usepackage[nonatbib]{neurips_2021}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}         % colors
+\usepackage[labelfont=bf]{caption}
+
+\usepackage{natbib}
+
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{graphicx}
+%\usepackage{subcaption}
+\usepackage{dsfont}
+\usepackage{multirow}
+\usepackage{subfigure}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{assumption}[theorem]{Assumption}
+
+\def\var{\mrm{var}} % Variance 
+\newcommand{\E}{{\mathbb{E}\,}}
+\newcommand{\Var}{\mathrm{Var}}
+
+\author{%
+  \small Aiyou Chen \\
+  \small Google \\
+  \and
+  \small Nick Doudchenko \\
+  \small Google \\
+  \and
+  \small Shunhua Jiang \\
+  \small Columbia \\
+  \and
+  \small Cliff Stein \\
+  \small Google \\
+  \and
+  \small Bicheng Ying \\
+  \small Google \\
+}
+
+\title{Supergeo Design: Generalized Matching for Geographic Experiments}
+
+\makeatletter
+\newcommand{\printfnsymbol}[1]{%
+  \textsuperscript{\@fnsymbol{#1}}%
+}
+\makeatother
+
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to break the
+% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
+% authors names on the first line, and the last on the second line, try using
+% \AND instead of \And before the third author name.
+
+\begin{document}
+\maketitle
+
+% Supergeo Design: Generalized Paired Matching Design
+% keywords: causal inference, experimental design, online advertising
+
+% It is OKAY to include author information, even for blind
+% submissions: the style file will automatically remove it for you
+% unless you've provided the [accepted] option to the icml2023
+% package.
+
+% List of affiliations: The first argument should be a (short)
+% identifier you will use later to specify author affiliations
+% Academic affiliations should list Department, University, City, Region, Country
+% Industry affiliations should list Company, City, Region, Country
+
+% You can specify symbols, otherwise they are numbered in order.
+% Ideally, you should not use this facility. Affiliations will be numbered
+% in order of appearance and this is the preferred way.
+% \icmlsetsymbol{equal}{*}
+
+% \begin{icmlauthorlist}
+% % \icmlauthor{Firstname1 Lastname1}{equal,yyy}
+% % \icmlauthor{Firstname2 Lastname2}{equal,yyy,comp}
+% % \icmlauthor{Firstname3 Lastname3}{comp}
+% % \icmlauthor{Firstname4 Lastname4}{sch}
+% % \icmlauthor{Firstname5 Lastname5}{yyy}
+% % \icmlauthor{Firstname6 Lastname6}{sch,yyy,comp}
+% % \icmlauthor{Firstname7 Lastname7}{comp}
+% % %\icmlauthor{}{sch}
+% % \icmlauthor{Firstname8 Lastname8}{sch}
+% % \icmlauthor{Firstname8 Lastname8}{yyy,comp}
+% %\icmlauthor{}{sch}
+% %\icmlauthor{}{sch}
+% \icmlauthor{Aiyou Chen}{aiyou}
+% \icmlauthor{Nick Doudchenko}{nick}
+% \icmlauthor{Shunhua Jiang}{shunhua}
+% \icmlauthor{Cliff Stein}{cliff}
+% \icmlauthor{Bicheng Ying}{bicheng} 
+% \end{icmlauthorlist}
+
+
+
+% \icmlaffiliation{aiyou}{Google (now at Waymo), Mountain View, CA 94043.} %\texttt{aiyouchen@google.com}}
+% \icmlaffiliation{nick}{Google, Boulder, CO 80301.}
+% %\texttt{nikolayd@google.com}}
+% \icmlaffiliation{shunhua}{Columbia University, New York, NY 10027. Work done while doing an internship at Google.}
+% %\texttt{sj3005@columbia.edu}}
+% \icmlaffiliation{cliff}{Google, New York, NY 10011.}
+% %\texttt{cstein@google.com}}
+% \icmlaffiliation{bicheng}{Google, Los Angeles, CA 90291.}
+% %\texttt{ybc@google.com}}
+% \icmlcorrespondingauthor{Nick Doudchenko}{nikolayd@google.com}
+
+% % You may provide any keywords that you
+% % find helpful for describing your paper; these are used to populate
+% % the "keywords" metadata in the PDF but will not be shown in the document
+% \icmlkeywords{causal inference, experimental design, online advertising}
+
+% \vskip 0.3in
+% ]
+
+% % this must go after the closing bracket ] following \twocolumn[ ...
+
+% % This command actually creates the footnote in the first column
+% % listing the affiliations and the copyright notice.
+% % The command takes one argument, which is text to display at the start of the footnote.
+% % The \icmlEqualContribution command is standard text for equal contribution.
+% % Remove it (just {}) if you do not need this facility.
+
+% %\printAffiliationsAndNotice{}  % leave blank if no need to mention equal contribution
+% \printAffiliationsAndNotice{\icmlEqualContribution} % otherwise use the standard text.
+
+\begin{abstract}
+\noindent We propose a generalization of the standard matched pairs design %\Shunhua{Change the name to paired matching design?}\Aiyou{+1 as no other paper mention 'mimum-weight matching experimental design'} 
+in which experimental units (often geographic regions or \emph{geos}) may be combined into larger units/regions called ``supergeos'' in order to improve the average matching quality. % without excluding geos which would lead to poorly matched pairs. 
+Unlike optimal matched pairs design which can be found in polynomial time \citep{lu2011optimal}, this generalized matching problem is NP-hard. We formulate it as a mixed-integer program (MIP) and show that experimental design obtained by solving this MIP can often provide a significant improvement over the standard design regardless of whether the treatment effects are homogeneous or heterogeneous. Furthermore, we present the conditions under which trimming techniques that often improve performance in the case of homogeneous effects \citep{chen2022robust}, may lead to biased estimates and show that the proposed design does not introduce such bias. We use empirical studies based on real-world advertising data to illustrate these findings.
+%When the treatment effects are homogeneous, the performance of the proposed method is comparable (usually better) \Shunhua{Usually better is to be too strong. I would remove it.} than that of the \emph{Trimmed Match Design} (TMD) \Shunhua{Trimmed match estimator?} from \citet{chen2021trimmed} which excludes (i.e.~\emph{trims}) some of the poorly matched pairs in order to reduce the variance of the estimate. When the effects are heterogeneous, the proposed method may substantially outperform TMD for estimating the average treatment effect across the entire population.\Aiyou{A comparison with classical matched pairs design would have more impact than with TMD, as revised above; Please feel free to revert.}
+% We also introduce a number of heuristics that allow solving the problem with hundreds of units without much detriment to the statistical performance. 
+%\Shunhua{The abstract seems a bit long to me. Can we make it more concise?}\Aiyou{Shortened a little.}\Shunhua{LGTM}
+% Numerical studies based on real data are reported.
+\end{abstract}
+
+% \setlength{\abovedisplayskip}{3pt}
+% \setlength{\belowdisplayskip}{3pt}
+
+\input{intro}
+\input{model}
+\input{supergeo_algo}
+\input{evaluation}
+\input{conclusion}
+% \setlength{\abovedisplayskip}{5pt}
+% \setlength{\belowdisplayskip}{5pt}
+
+% In the unusual situation where you want a paper to appear in the
+% references without citing it in the main text, use \nocite
+%\nocite{langley00}
+
+\clearpage
+\newpage
+\bibliography{ref}
+\bibliographystyle{icml2023}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% APPENDIX
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\appendix
+\onecolumn
+\input{app_figures}
+\input{app_more_eval}
+\input{app_size}
+\input{app_inference}
+\input{app_heuristics}
+\input{app_np_hard}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\end{document}
+
+
+% This document was modified from the file originally made available by
+% Pat Langley and Andrea Danyluk for ICML-2K. This version was created
+% by Iain Murray in 2018, and modified by Alexandre Bouchard in
+% 2019 and 2021 and by Csaba Szepesvari, Gang Niu and Sivan Sabato in 2022.
+% Modified again in 2023 by Sivan Sabato and Jonathan Scarlett.
+% Previous contributors include Dan Roy, Lise Getoor and Tobias
+% Scheffer, which was slightly modified from the 2010 version by
+% Thorsten Joachims & Johannes Fuernkranz, slightly modified from the
+% 2009 version by Kiri Wagstaff and Sam Roweis's 2008 version, which is
+% slightly modified from Prasad Tadepalli's 2007 version which is a
+% lightly changed version of the previous year's version by Andrew
+% Moore, which was in turn edited from those of Kristian Kersting and
+% Codrina Lauth. Alex Smola contributed to the algorithmic style files.

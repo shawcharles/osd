@@ -1,0 +1,132 @@
+\section{Algorithm}\label{sec:supergeo_algo}
+%In this section we present algorithms to find the optimal supergeo design in practice.
+
+%\subsection{Supergeo design in practice}\label{sec:problem_formulation}
+Following our theoretical model from Section~\ref{sec:model}, the goal is to find a supergeo design $\{(G_{k,+}, G_{k,-})\}_{k=1}^K$ that minimizes the following loss:
+\begin{equation}\label{eq:loss}
+\mathrm{loss}(\{(G_{k,+}, G_{k,-})\}_{k=1}^K) := \sum_{k=1}^K (Z_{G_{k,+}} - Z_{G_{k,-}})^2.
+\end{equation}
+This loss coincides with the variance of the empirical estimator in the homogeneous $\theta_g$ case (Eq.~\eqref{eq:variance}) and corresponds to the variance of term $err_1$ in the heterogeneous $\theta_g$ case. This term is likely to dominate the other two, especially in online advertising applications where ad spend is often at a much smaller scale than revenue.
+%is essentially the only term we can optimize since the other two error terms both depend on $\theta_g$'s that are completely unknown.
+
+%the optimal supergeo design is the design $\{(G_{k,+}, G_{k,-})\}_{k=1}^K$ that minimizes the error of $\hat{\theta}$. In the homogeneous $\theta_g$ model, $\hat{\theta}$ is an unbiased estimator of $\theta$ with variance shown in Eq.~\eqref{eq:variance}, so we can find the optimal design by minimizing the loss 
+
+%\Shunhua{TODO: justify why using this loss is good for both homogeneous and heterogeneous models.}
+%In the heterogeneous $\theta_g$ model, this loss corresponds to the first error term in Eq.~\eqref{eq:hetero_error}, and it's still a natural choice since the other two error terms all depend on $\theta_g$'s that are completely unknown.
+\paragraph{Matching variables.}
+While ideally we would want to match supergeo pairs based on the values of uninfluenced responses, $Z_g$, those are usually unobserved. We follow the existing literature \citep{chen2021trimmed} and approximate the uninfluenced responses by the responses in the pretest phase. Throughout this section we continue using $Z_g$'s to denote the variables we match on, but in practice pretest responses are often used.
+
+%This is often a good approximation since the control variables, $S_g$, are usually much smaller than the responses $R_g$'s. 
+
+\paragraph{Size of supergeo pairs.}
+%\Shunhua{To discuss: should we move this "subset size" paragraph to the previous "model" section? Or move the whole Section 3.1 to the "model" section?}
+As already discussed, the loss in Eq.~\eqref{eq:loss} is minimized by dividing all geos into two supergeos, i.e.~when $K=1$. However, in practice this is often not desirable for a variety of reasons:
+%We further add a restriction that the size of each supergeo pair is in some range $[\ell, u]$, i.e.~$\ell \leq |G_{k,+}| + |G_{k,-}| \leq u$ for all $k$, and $\ell$ and $u$ are two tunable parameters. We usually set $\ell = 2$ so that the supergeo design is a natural generalization of the matched pairs design. While a larger $u$ always leads to a smaller loss, in practice we prefer to choose a smaller $u$ for the following reasons:
+\begin{itemize}
+\item {\bf Overfitting.} Since the observed response variables do not have to follow our linear model and since they approximate the true uninfluenced responses which are unobserved,  %\Shunhua{Should we put the "pretest responses" paragraph before the "Size of supergeo pairs" paragraph? Here we refer to the error induced by approximating $Z_g$'s using the pretest responses.}\Aiyou{+1} 
+using large supergeos could lead to overfitting to the pretest data. In our experiments we observe that while increasing the maximum allowed size of supergeos leads to smaller training losses, the performance on the test set may suffer (see Appendix~\ref{sec:appendix-B-eval} for an example). This issue can be resolved by tuning the maximum allowed size of supergeo pairs---splitting the pretest data into two subsets, one for creating candidate designs and the other for validation---in the spirit of cross-validation used in machine learning. %\Shunhua{Should we put the last sentence to the future work section? Or explain somewhere that currently we are not using this cross-validation.} %, in the same spirit as cross validation, which is common for machine learning, but relatively new for experimental designs \citep[see][]{chen2021trimmed}. %\Shunhua{Add a remark about cross validation.}\Aiyou{Added a sentence.}
+\item {\bf Inference.} Using fewer supergeo pairs makes statistical inference harder. For example,
+the trimmed match estimator from \citet{chen2022robust} uses $t$-distribution as an approximation to construct the confidence intervals. This approximation requires at least two pairs and the quality of the approximation improves as the number of pairs grows. Similarly, when using inference approaches such as Fisher's exact test \citep{fisher1922interpretation}, we want to allow for many possible treatment assignments as opposed to just two which corresponds to the case of two large supergeos (see Appendix~\ref{sec:inference}).
+\item {\bf Robustness.} Increasing the number of supergeo pairs increases the number of possible treatment assignments which makes the experimental design more robust to adversarial considerations (see Appendix~\ref{sec:size} for details). 
+\item {\bf Computational efficiency.} Increasing the maximum allowed size of supergeo pairs increases the number of candidate pairs which could be included in the optimal design. Depending on the formulation of the optimization problem, this often leads to the problem being intractable. %too slow to solve. %intractable.
+\end{itemize}
+
+\noindent For these reasons, we add a constraint that the size of each supergeo pair is within a range, $[\ell, u]$, i.e.~$\ell \leq |G_{k,+}| + |G_{k,-}| \leq u$ for all $k$, where $\ell$ and $u$ are two tunable parameters. We usually set $\ell = 2$ so that the supergeo design is a natural generalization of the matched pairs design. When reporting the empirical results in Section~\ref{sec:eval}, we limit the size of supergeo pairs to 4 which performs well in our applications.\footnote{We currently do not tune this parameter and set it to a fixed value that provides a good matching quality without leading to particularly large supergeos.}
+
+The first three of the concerns above could also be addressed by adding an explicit ``minimum pairs'' constraint that restricts the number of supergeo pairs to be at least $\kappa$. However, this constraint is ineffective in addressing the issue of computational efficiency. Since the size constraint (combined with the heuristics that we use for the MIP formulation discussed in Appendix~\ref{sec:heuristics}) leads to a design with a sufficient number of supergeo pairs, in our empirical evaluations we set $\kappa = 1$.
+
+%Note that $u$ prevents us from aggregating too many geos into a single supergeo. On the other hand, it could also prevent us from creating singleton-supergeo pairs, even if they are well-matched. For example, with 40 very similar geos, where the optimal design would make 20 pairs, but with $u=4$ we would only get 10 supergeo pairs, which is less desirable. This may lead to another source of overfitting. To resolve this, we add another tuning parameter $\kappa$ about the minimum number of supergeo pairs, i.e. $K\geq \kappa$. $\kappa$ can be chosen by cross validation as mentioned earlier. The per-geo heuristic that we will introduce in Section~\ref{sec:heuristics} is also helpful in preserving the singleton-supergeo pairs.\Aiyou{Nick please take a look/edit this new paragraph.}\Nick{To be honest, I would currently comment this out. It's not quite how we use $u$---setting it at 4 does not prevent us from considering smaller supergeo pairs.}\Aiyou{It does not prevent smaller supergeos, but prevent supergeos with a single geo. Am I right?}
+
+%We also add a minimum number of supergeo pairs constraint to that could further restrict the design to have many supergeo pairs. 
+%\Shunhua{@Aiyou, I added a sentence here. I'm intentionally being vague here since in evaluations we set the minimum number of supergeo pairs to be 1, so it's not actually restricting anything currently. But we have the option to make use of this constraint by setting a larger number.}\Aiyou{@Shunhua, I drafted a few sentences from the statistical perspective. Could you revise? I think it is okay to tell the specific value of $\kappa$ for the experiments.}\Shunhua{It looks good to me. I added that the per-geo heuristic is also helpful.}\Aiyou{LGTM} %, and we choose $u$ to be in $\{3,4\}$.
+%\Cliff{Do we want to say that computational tractability is a reason too?}
+%\Aiyou{Since cross validation is not used, what criteria do we use to decide which size to use in the end?}
+%\Shunhua{We actually fixed the size to be 4 in the experiments. We could change the size, and pick the design with the smallest training loss.}
+%\Aiyou{I see. It looks that the simulation already uses a test set, so we could just use that test results to choose the size. Then for actual evaluation, simulate another test set? The new test results would be quite similar to the ones reported here for the same size, but makes the presentation stronger.}
+%\Aiyou{Per discussion, minimization of training loss always leads to the largest u; Leaving it to future work is a good idea. Shall we add that we fix the size to be 4 for the numerical studies?}
+
+
+
+\subsection{NP-hardness}
+For a supergeo pair $(G_{k,+}, G_{k,-})$, define $G_{k} := G_{k,+} \cup G_{k,-}$. Observe that in order to minimize the loss~\eqref{eq:loss}, $(G_{k,+}, G_{k,-})$ must be an optimal split that minimizes $(Z_{G_{k,+}} - Z_{G_{k,-}})^2$ among all splits of $G_k$:
+\[
+(G_{k,+}, G_{k,-}) \in {\arg \min}_{\substack{G'_{k,+} \cup G'_{k,-} = G_k \\ G'_{k,+} \cap G'_{k,-} = \emptyset}} (Z_{G'_{k,+}} - Z_{G'_{k,-}})^2.
+\]
+While there may be multiple optimal splits, $(G_{k,+}, G_{k,-})$, the minimum possible distance between them is uniquely determined given the union $G_k$. Consequently, we can define the loss~\eqref{eq:loss} with respect to $G_k$'s. For any subset $G \in \mathcal{G}$, let
+\[
+\mathrm{score}(G) := \min_{\substack{G_+ \cup G_- = G \\ G_+ \cap G_- = \emptyset}} (Z_{G_+} - Z_{G_-})^2.
+\]
+Our goal is to find a partition of $\mathcal{G}$ into disjoint subsets $\{G_k\}_{k=1}^K$ that minimize the loss
+\[
+\mathrm{loss}(\{G_k\}_{k=1}^K) := \sum_{k=1}^K \mathrm{score}(G_k).
+\]
+%\Shunhua{To discuss: is the current notation $G_k$, $G_1, G_2$, $G_{k,+}, G_{k,-}$ confusing? Change $G_{k,+}, G_{k,-}$ to $G_{k,+}, G_{k,-}$?}\Bicheng{+1 on $G_{k,+}, G_{k,-}$}
+
+
+
+
+
+
+
+
+
+%The variance in Eq.~\eqref{eq:variance} implies that in order to design a ``good'' experiment we want to set the difference of baseline responses within the same group to be as small as possible. In the geo matching design, this is equivalent to a minimum-weight matching problem, while in the supergeo matching design, this is a generalized hyper-graph matching problem. Since the magnitude of the control variable $S_g$ is usually much smaller than that of the responses $R_g$, we approximate $Z_g$ by the response value of the pretest data.
+
+% \Shunhua{TODO: mention the problem is NP hard, and point to appendix}
+% \Nick{I would also use NP-hardness as a motivation to use MIP.}
+
+
+
+\noindent While the optimal matched pairs design can be found in polynomial time, the proposed generalized matching problem is NP-hard even when the size of $G_{k}$ increases from 2 to 3 (setting $\ell = u = 3$).
+\begin{theorem}[NP-hardness]\label{thm:np_hard}
+The following problem is NP-hard: Given a set $\mathcal{G}$ of size $|\mathcal{G}|=3m$ and values $Z_g \in \mathbb{Z}^+$ for each $g \in \mathcal{G}$, for any subset $G \subseteq [3m]$ define
+\[
+\mathrm{score}(G) := \min_{\substack{G_+ \cup G_- = G \\ G_+ \cap G_- = \emptyset}} \Big( \sum_{i \in G_+} Z_{i} - \sum_{j \in G_-} Z_{j} \Big)^2.
+\]
+Determine whether $\mathcal{G}$ can be partitioned into $m$ disjoint sets $G_1, G_2, \dots, G_m$ such that for all $i \in [m]$, $|G_i|=3$ and $\mathrm{score}(G_i) = 0$ ($[m]$ stands for the set $\{1,2,\dots,m\}$).
+\end{theorem}
+\noindent Note that this decision problem is easier than the problem we are interested in (loss minimization).
+%\Aiyou{It is unlikely to get $\mathrm{score}(G_i) = 0$. Is the idea to say that the actual minimization problem is harder than this?}\Shunhua{I added an explanation.}
+We include a formal proof of the theorem in Appendix~\ref{sec:np_hard}.
+
+\subsection{MIP formulation}\label{sec:mip}
+%\Cliff{I think that the two papers we cite use a very different formulation.  We should empasize that we are using a covering formulation and that this is important}\Shunhua{Done.}
+To tackle this NP-hard problem, we propose a covering formulation and solve it using mixed-integer programming (MIP). The idea of using MIP for experimental design is not new \citep[see, for example,][]{zubizarreta2012using,doudchenko2021synthetic,abadie2021synthetic}, but our covering formulation is novel.
+%Similar to \citet{doudchenko2021synthetic} and \citet{abadie2021synthetic}, we formulate the problem as a mixed-integer program (MIP). 
+
+Define $\mathcal{F} := \{G \subseteq \mathcal{G} \mid \ell \leq |G| \leq u\}$. Our variable is a boolean vector $x \in \{0,1\}^{|\mathcal{F}|}$ such that component $x_G$ indicates whether a candidate supergeo pair $G$ is included in the supergeo design. 
+%For any $G \subseteq \mathcal{G}$ with size $\ell \leq |G| \leq u$, we use a binary variable $x_G \in \{0,1\}$ to indicate whether $G$ is included in the supergeo design.
+For each geo $g$, we add a linear constraint that restricts $g$ to be covered by exactly one supergeo pair. To express this constaint, we define a vector $M^{(g)} \in \{0,1\}^{|\mathcal{F}|}$ such that $M^{(g)}_{G} = 1$ if $g \in G$ and $M^{(g)}_{G} = 0$ otherwise. The constraint that geo $g$ is covered by exactly one supergeo pair is equivalent to $(M^{(g)})^{\top} x = 1$. We stack these column-vectors into a matrix $M := [M^{(g_1)} \cdots M^{(g_N)}] \in \{0,1\}^{|\mathcal{F}| \times N}$. 
+%Often, we don't want to merge all geos into too few supergeos. To avoid this, researcher can set a scalar $\kappa$, the smallest number of groups, and add the constraint to force the design to generate enough supergeos.
+
+Let $\mathds{1}_d$ denote the all-one vector of dimension $d$ for any $d$. The mixed-integer program we solve is as follows:
+\begin{align*}
+    \min_{x}&\;\; \sum_{G \subseteq \mathcal{G}:\ \ell \leq |G| \leq u} \mathrm{score}(G) \cdot x_G \\
+    \text{s.t.}&
+    ~~~~M^{\top} x = \mathds{1}_N,  \hspace{1.5cm} & \mbox{(Exact cover)}\\
+    &~~~~\mathds{1}_{|\mathcal{F}|}^\top \cdot x \geq \; \kappa, &\mbox{(Minimum pairs)} \\
+    &~~~~ x \in \{0,1\}^{|\mathcal{F}|}. & \mbox{(Boolean selection)}
+%     \begin{aligned}
+%     M^{\top} x =&\; \mathds{1}_n,  \hspace{1.5cm}&\mbox{(Exact cover)}\\
+% %     \mathds{1}_{m}^T x \geq&\; \kappa, &\mbox{(Minimum pairs)}\\
+%      x \in\;& \{0,1\}^{|\mathcal{G}|}. &\mbox{(Boolean selection)}
+%     \end{aligned}
+\end{align*}
+% \begin{align*}
+%     M:= \begin{bmatrix}
+%     M_{g_1}^{\top} \\
+%     \vdots \\
+%     M_{g_n}^{\top}
+%     \end{bmatrix}, \;\;\;\mathds{1} := \begin{bmatrix}
+%     1 \\
+%     \vdots \\
+%     1
+%     \end{bmatrix}.
+% \end{align*}
+%\Aiyou{Shall we add the number of pairs as another tuning parameter? This looks important intuitively -- otherwise this would rule out singleton supergeos, as two singleton-supergeo pairs would always be aggregated into one supergeo pair, which may lead to overfitting. BTW this may provide another reason (probably more reasonable than a computational excuse :) about why there are many singleton supergeo pairs in Figure 3.}\Shunhua{We are not using the number of pairs constraint in our experiments. In practice we observed that sometimes when adding the number of pairs constraint the MIP becomes harder to solve.}\Bicheng{I checked the code, we do have $\mathds{1}^{\top} x >= 1$ constraint in the experiment.}\Aiyou{Glad the code takes care of that. From statistical perspective, u makes sure we don't produce elephant supergeos, which is critical, but it also rules out well-matched supergeo pairs which could be small; So adding the tuning parameter on number of pairs will help us preserve the small well-matched supergeo pairs. I can imagine an ideal case with 40 very similar geos, for which 20 pairs is optimal, but our current formulation would lead to only 10 pairs. How many pairs ended up for the experiments?}\Shunhua{For 210 geos we had $\approx 80$ pairs. I've added back the number of pairs constraint.}\Aiyou{+1 maybe also add a discussion next to 'size of supergeo pairs'?}
+We use SCIP solver of \citet{BestuzhevaEtal2021OO} to solve this MIP which can be done under 1 hour for approximately $N=50$ geos and the maximum size of supergeo pairs equal to 4. To speed up the optimization and make the problem tractable at the practically important scale ($N=210$) we employ a number of heuristics discussed in Appendix~\ref{sec:heuristics}.\footnote{The most straightforward MIP formulation is to use $O(N^2)$ variables such that variable $(i,j)$ indicates whether the $i$-th geo is in the $j$-th supergeo. Our covering formulation has $O(N^u)$ variables. However, it is much easier to solve due to the numerous symmetries between variables intrinsic to the alternative formulation.}
+%\Shunhua{Please check this sentence.}
+%\Aiyou{Can we add an example with roughly how much faster our covering MIP is than the straight-forward one?}\Shunhua{Even in the small case with $N=15$ geos and $\kappa =4$ supergeo pairs, I wasn't able to solve the straight-forward MIP within an hour. Given this, I think it's fair to say the straight-forward MIP would take "forever" on 210 geos. We gave up this formulation pretty quickly. I had some experimental codes in \url{https://source.corp.google.com/piper///depot/google3/experimental/users/shunhuajiang/supergeos/} that you are welcomed to try out.}\Aiyou{I see. LGTM then.}
+
+
+

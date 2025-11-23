@@ -1,0 +1,45 @@
+\section{Proof of NP hardness}\label{sec:np_hard}
+In this section we prove Theorem~\ref{thm:np_hard}.
+\begin{theorem}[Supergeo design problem is NP-hard. Restatement of Theorem~\ref{thm:np_hard}]
+The following problem is NP-hard: Given a set $\mathcal{G}$ of size $|\mathcal{G}|=3m$ and values $Z_g \in \mathbb{Z}^+$ for each $g \in \mathcal{G}$, for any subset $G \subseteq [3m]$ define
+\[
+\mathrm{score}(G) := \min_{\substack{G_+ \cup G_- = G \\ G_+ \cap G_- = \emptyset}} \Big( \sum_{i \in G_+} Z_{i} - \sum_{j \in G_-} Z_{j} \Big)^2.
+\]
+Determine whether $\mathcal{G}$ can be partitioned into $m$ disjoint sets $G_1, G_2, \dots, G_m$ such that for all $i \in [m]$, $|G_i|=3$ and $\mathrm{score}(G_i) = 0$ ($[m]$ stands for the set $\{1,2,\dots,m\}$).
+%The following problem is NP hard: Given a set $\mathcal{G}$ of size $|\mathcal{G}|=3m$ and each $g \in \mathcal{G}$ has a value $Z_g \in \mathbb{Z}^+$. For any subset $G \subseteq [3m]$, define
+%\[
+%\mathrm{score}(G) := \min_{\substack{G_+ \cup G_- = G \\ G_+ \cap G_- = \emptyset}} \Big( (\sum_{i \in G_+} Z_{i}) - (\sum_{j \in G_-} Z_{j}) \Big)^2.
+%\]
+%The question is to determine whether $\mathcal{G}$ can be partitioned into $m$ disjoint sets $G_1, G_2, \cdots, G_m$ such that for all $i \in [m]$, $|G_i|=3$ and $\mathrm{score}(G_i) = 0$.
+\end{theorem}
+We prove the NP-hardness of our problem by a reduction from the following numerical 3-dimensional matching problem of \citet{gj90}.
+\begin{theorem}[Numerical 3-dimensional matching problem is NP-hard, SP16 in Appendix A of \citet{gj90}]
+The following problem is NP-hard: Given disjoint sets $W$, $X$, and $Y$, each containing $m$ elements, each element $a \in W \cup X \cup Y$ having size $s(a) \in \mathbb{Z}^+$, and given a bound $B \in \mathbb{Z}^+$. Determine whether $W \cup X \cup Y$ can be partitioned into $m$ disjoint sets $A_1, A_2, \dots, A_m$ such that for all $i \in [m]$, $A_i$ contains exactly one element from each of $W$, $X$, and $Y$, and $\sum_{a \in A_i} s(a) = B$.
+\end{theorem}
+\begin{proof}[Proof of Theorem~\ref{thm:np_hard}]
+Given a numerical 3-dimensional matching instance, we transform it into a supergeo design instance as follows: Define $M := 1 + B + \sum_{a \in W \cup X \cup Y} s(a)$. Let $\mathcal{G} = W \cup X \cup Y$, and define the values as:
+\begin{align*}
+Z_w = &~ s(w) + M, \quad \forall w \in W, \\
+Z_x = &~ s(x) + 3 M, \quad \forall x \in X, \\
+Z_y = &~ B - s(y) + 4 M, \quad \forall y \in Y.
+\end{align*}
+We prove that $W \cup X \cup Y$ can be partitioned into $m$ disjoint sets with equal sums if and only if $\mathcal{G}$ can be partitioned into $m$ disjoint sets with zero scores.
+
+On the one hand, if $W \cup X \cup Y$ can be partitioned into $m$ disjoint sets $A_1, A_2, \dots, A_m$ such that for all $i \in [m]$, $A_i = \{w_i, x_i, y_i\}$ where $w_i \in W$, $x_i \in X$, and $y_i \in Y$, and $s(w_i) + s(x_i) + s(y_i) = B$, then for all $i \in [m]$ let $G_i = A_i$, and we have
+\begin{align*}
+\mathrm{score}(G_i) = &~ (Z_{w_i} + Z_{x_i} - Z_{y_i})^2 \\
+= &~ \Big((s(w_i) + M) + (s(x_i) + 3M) - (B - s(y_i) + 4M) \Big)^2 \\
+= &~ \Big(s(w_i) + s(x_i) - B + s(y_i) \Big)^2 = 0.
+\end{align*}
+
+\noindent On the other hand, if $\mathcal{G}$ can be partitioned into $m$ disjoint sets $G_1, G_2, \dots, G_m$ such that for all $i \in [m]$, $|G_i|=3$ and $\mathrm{score}(G_i) = 0$, then we argue that each $G_i$ must be of the form $G_i = \{w_i, x_i, y_i\}$ where $w_i \in W$, $x_i \in X$, $y_i \in Y$, and $s(w_i) + s(x_i) + s(y_i) = B$. Denote $G_i = \{a_i, b_i, c_i\}$, and w.l.o.g.~assume that $\mathrm{score}(G_i) = (Z_{a_i} + Z_{b_i} - Z_{c_i})^2$. Note that the only way that three numbers $a, b, c \in \{1, 3, 4\}$ satisfy $a + b - c = 0$ is when $a = 1$, $b = 3$ (or $a = 3$, $b = 1$), and $c = 4$. This implies that unless $a_i \in W$, $b_i \in X$ (or $a_i \in X$, $b_i \in W$), and $c_i \in Y$, we must have that 
+\[
+Z_{a_i} + Z_{b_i} - Z_{c_i} = t \cdot M + s,
+\]
+where $t$ is some \emph{non-zero} integer and $|s| \leq B + s(a_i) + s(b_i) + s(c_i) < 1 + B + \sum_{a \in W \cup X \cup Y} s(a) = M$, and therefore $t \cdot M + s \neq 0$. Thus, $\mathrm{score}(G_i)$ can only possibly be zero when $a_i \in W$, $b_i \in X$ (or $a_i \in X$, $b_i \in W$), and $c_i \in Y$ in which case
+\[
+s(a_i) + s(b_i) + s(c_i) - B = Z_{a_i} + Z_{b_i} - Z_{c_i} = 0. \qedhere
+\]
+\end{proof}
+
+\noindent This proof also shows that the supergeo design problem is strongly NP-hard since the numerical 3-dimentional matching problem is strongly NP-hard and in our proof the values $Z_g$'s of the constructed supergeo design instance are all polynomially bounded.
