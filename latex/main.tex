@@ -366,7 +366,7 @@ All simulations run under Python~3.10 on an \texttt{Intel Xeon Gold~6230R} (2.1~
 % Absolute bias distribution
 \begin{figure}[t!]
     \centering
-    \includegraphics[width=0.5\linewidth]{figures/ablation_boxplot.pdf}
+    \includegraphics[width=0.5\linewidth]{ablation_boxplot.pdf}
     \caption{Distribution of RMSE across 50 Monte Carlo replications. OSD with PCA achieves statistical parity with randomization, while Spectral embedding introduces substantial bias through over-tight clustering.}
     \label{fig:abs_bias_box}
 \end{figure}
@@ -425,7 +425,7 @@ To validate our choice of PCA for candidate generation, we conducted a rigorous 
 
 \begin{figure}[t!]
     \centering
-    \includegraphics[width=0.9\linewidth]{figures/ablation_comparison.pdf}
+    \includegraphics[width=0.9\linewidth]{ablation_comparison.pdf}
     \caption{Ablation study comparing RMSE and runtime across embedding methods. PCA achieves statistical parity with randomization (left panel) while maintaining computational efficiency (right panel). Spectral embedding introduces substantial bias through over-tight clustering.}
     \label{fig:ablation_comparison}
 \end{figure}
@@ -440,7 +440,7 @@ This granularity tradeoff is fundamental: Supergeo formation reduces degrees of 
 
 \begin{figure}[t!]
     \centering
-    \includegraphics[width=0.85\linewidth]{figures/covariate_balance.pdf}
+    \includegraphics[width=0.85\linewidth]{covariate_balance.pdf}
     \caption{Covariate balance comparison across methods. OSD-PCA achieves excellent balance (SMD $<$ 1\% for all covariates), matching Random assignment while Spectral embedding introduces moderate imbalance. The 1\% threshold (green dashed line) represents excellent balance for causal inference.}
     \label{fig:covariate_balance}
 \end{figure}
@@ -462,13 +462,13 @@ Furthermore, it is evident that very small effects, specifically those of 0.1 st
 
 \begin{figure}[t!]
     \centering
-    \includegraphics[width=0.95\linewidth]{figures/power_analysis.pdf}
+    \includegraphics[width=0.95\linewidth]{power_analysis.pdf}
     \caption{Statistical power analysis across 6 sample sizes (N = 50--300) and 5 effect sizes (0.1--1.0 SD). OSD achieves 80\% power for moderate effect sizes ($\geq$0.25 SD) with N$\geq$150. Small effects (0.1 SD) require larger sample sizes than evaluated.}
     \label{fig:power_analysis}
 \end{figure}
 
 % Enhanced Power Analysis Plots - Commented out (figures not generated)
-% Use figures/power_analysis.pdf instead
+% Use power_analysis.pdf instead
 % \begin{figure}[htb!]
 %     \centering
 %     \includegraphics[width=0.6\textwidth]{power_curve_enhanced_es_0p25.png}
@@ -570,7 +570,7 @@ Furthermore, the empirical analysis of computational complexity confirms the sub
 %Overall, these findings highlight the robust performance and scalability of the OSD method, affirming its potential for practical application in computationally intensive scenarios.
 
 % Enhanced Efficiency Analysis Plot - Commented out (figure not generated)
-% Use figures/scalability.pdf instead
+% Use scalability.pdf instead
 % \begin{figure}[htb!]
 %     \centering
 %     \includegraphics[width=0.9\textwidth]{efficiency_comparison_enhanced.png}
@@ -605,7 +605,7 @@ To quantify computational scalability we rerun the design stage for problem size
 
 \begin{figure}[t!]
     \centering
-    \includegraphics[width=0.85\linewidth]{figures/scalability.pdf}
+    \includegraphics[width=0.85\linewidth]{scalability.pdf}
     \caption{Scalability comparison: OSD runtime (empirical, all N) exhibits subquadratic scaling ($\mathcal{O}(N^{1.9})$). Chen et al. \citep{chen2023} reported the exact Supergeo covering MIP requires "weeks" for N=210 US DMAs (red star), demonstrating NP-hard exponential complexity. OSD achieves over 5 million$\times$ speedup through PCA-based candidate generation.}
     \label{fig:scalability}
 \end{figure}
