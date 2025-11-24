@@ -51,7 +51,7 @@ Add PCA variance preservation tests
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/asd.git
+git clone https://github.com/YOUR_USERNAME/osd.git
 cd asd
 
 # Create a virtual environment
