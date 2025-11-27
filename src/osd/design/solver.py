@@ -37,13 +37,42 @@ class SupergeoSolver:
             for k, feat in enumerate(self.features[2:]):
                 self.X[i, k+2] = sg.covariates.get(feat, 0.0)
                 
-        # Normalize features for numerical stability (and SMD calculation)
-        # We use Standard Deviation of the *original units* ideally, 
-        # but here we scale by the supergeo population std dev estimate.
-        # For simplicity in MILP, we minimize sum differences on standardized scale.
+        # Normalize features for numerical stability in MILP
+        # Note: This normalization is for optimization only.
+        # True SMD calculation uses pooled within-group std (see calculate_smd method)
         self.means = self.X.mean(axis=0)
         self.stds = self.X.std(axis=0) + 1e-6
         self.X_norm = (self.X - self.means) / self.stds
+    
+    def calculate_smd(self, vals_a, vals_b):
+        """
+        Calculate Standardized Mean Difference using pooled within-group standard deviation.
+        
+        This implements the SMD formula from the paper (Section 4.3):
+        SMD(X) = (mean_A - mean_B) / sqrt((var_A + var_B) / 2)
+        
+        Args:
+            vals_a: Array of values for group A
+            vals_b: Array of values for group B
+            
+        Returns:
+            SMD value
+        """
+        mean_a = np.mean(vals_a)
+        mean_b = np.mean(vals_b)
+        
+        # Use ddof=1 for sample variance (Bessel's correction)
+        var_a = np.var(vals_a, ddof=1) if len(vals_a) > 1 else 0.0
+        var_b = np.var(vals_b, ddof=1) if len(vals_b) > 1 else 0.0
+        
+        # Pooled standard deviation
+        pooled_std = np.sqrt((var_a + var_b) / 2)
+        
+        # Avoid division by zero
+        if pooled_std < 1e-9:
+            return 0.0
+        
+        return (mean_a - mean_b) / pooled_std
 
     def solve(self, n_treatment: int, n_control: int, time_limit: float = 30.0):
         """
@@ -138,3 +167,151 @@ class SupergeoSolver:
     def _random_fallback(self, n_treatment):
         # Not implemented fully, just random for safety
         return np.random.choice(self.n, n_treatment, replace=False).tolist()
+    
+    def solve_multi_partition(self, candidate_partitions: List[List[Supergeo]], 
+                             n_treatment: int, n_control: int, 
+                             time_limit: float = 30.0, verbose: bool = False):
+        """
+        Solve the multi-partition selection problem as described in the paper.
+        
+        This implements Stage 2 of the OSD algorithm:
+        - For each candidate partition, solve optimal T/C assignment
+        - Select the partition with minimum cost
+        
+        Args:
+            candidate_partitions: List of partitions (each is a List[Supergeo])
+            n_treatment: Number of supergeos to assign to treatment
+            n_control: Number of supergeos to assign to control
+            time_limit: Time limit per partition optimization
+            verbose: Print progress information
+            
+        Returns:
+            Tuple of (best_partition_idx, treatment_indices, best_cost)
+        """
+        best_cost = np.inf
+        best_partition_idx = 0
+        best_treatment_indices = []
+        
+        if verbose:
+            print(f"Evaluating {len(candidate_partitions)} candidate partitions...")
+        
+        for partition_idx, partition in enumerate(candidate_partitions):
+            # Temporarily set this partition as the active one
+            old_supergeos = self.supergeos
+            old_n = self.n
+            old_features = self.features
+            old_X = self.X
+            old_X_norm = self.X_norm
+            
+            try:
+                # Re-initialize solver with this partition
+                self.__init__(partition, self.weights)
+                
+                # Solve assignment for this partition
+                treatment_indices = self.solve(n_treatment, n_control, time_limit)
+                
+                # Evaluate cost
+                cost = self._evaluate_cost(treatment_indices)
+                
+                if verbose:
+                    print(f"  Partition {partition_idx}: cost = {cost:.4f}")
+                
+                # Update best if this is better
+                if cost < best_cost:
+                    best_cost = cost
+                    best_partition_idx = partition_idx
+                    best_treatment_indices = treatment_indices
+                    
+            except Exception as e:
+                if verbose:
+                    print(f"  Partition {partition_idx}: failed with error {e}")
+            finally:
+                # Restore original state
+                self.supergeos = old_supergeos
+                self.n = old_n
+                self.features = old_features
+                self.X = old_X
+                self.X_norm = old_X_norm
+        
+        if verbose:
+            print(f"Selected partition {best_partition_idx} with cost {best_cost:.4f}")
+        
+        # Set the best partition as active
+        self.__init__(candidate_partitions[best_partition_idx], self.weights)
+        
+        return best_partition_idx, best_treatment_indices, best_cost
+    
+    def evaluate_balance(self, treatment_indices):
+        """
+        Evaluate covariate balance for a given assignment using proper SMD calculations.
+        
+        This computes SMD for each feature using the pooled within-group standard deviation
+        as defined in the paper (Section 4.3).
+        
+        Args:
+            treatment_indices: List of supergeo indices assigned to treatment
+            
+        Returns:
+            Dictionary mapping feature names to SMD values
+        """
+        t_idx = set(treatment_indices)
+        c_idx = set(range(self.n)) - t_idx
+        
+        if len(t_idx) == 0 or len(c_idx) == 0:
+            return {feat: np.inf for feat in self.features}
+        
+        smds = {}
+        
+        for feat_idx, feat_name in enumerate(self.features):
+            # Get values for this feature (original scale, not normalized)
+            t_vals = self.X[list(t_idx), feat_idx]
+            c_vals = self.X[list(c_idx), feat_idx]
+            
+            # Compute SMD using proper formula
+            smd = self.calculate_smd(t_vals, c_vals)
+            smds[feat_name] = smd
+        
+        return smds
+    
+    def _evaluate_cost(self, treatment_indices, use_proper_smd=True):
+        """
+        Evaluate the cost (objective function value) for a given assignment.
+        
+        This computes the weighted sum of absolute SMDs across all features.
+        
+        Args:
+            treatment_indices: List of supergeo indices assigned to treatment
+            use_proper_smd: If True, use proper SMD calculation (pooled std).
+                          If False, use normalized scale (for backward compatibility).
+            
+        Returns:
+            Total cost (sum of weighted absolute SMDs)
+        """
+        t_idx = set(treatment_indices)
+        c_idx = set(range(self.n)) - t_idx
+        
+        if len(t_idx) == 0 or len(c_idx) == 0:
+            return np.inf
+        
+        total_cost = 0.0
+        
+        for feat_idx, feat_name in enumerate(self.features):
+            # Get values for this feature
+            t_vals = self.X[list(t_idx), feat_idx]
+            c_vals = self.X[list(c_idx), feat_idx]
+            
+            if use_proper_smd:
+                # Use proper SMD with pooled within-group std
+                smd = abs(self.calculate_smd(t_vals, c_vals))
+            else:
+                # Use normalized scale difference (backward compatible)
+                t_vals_norm = self.X_norm[list(t_idx), feat_idx]
+                c_vals_norm = self.X_norm[list(c_idx), feat_idx]
+                smd = abs(t_vals_norm.mean() - c_vals_norm.mean())
+            
+            # Apply weight
+            weight = self.weights.get(feat_name, 1.0) if isinstance(self.weights, dict) else 1.0
+            
+            total_cost += weight * smd
+        
+        return total_cost

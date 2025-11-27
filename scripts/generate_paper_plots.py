@@ -42,6 +42,8 @@ plt.rcParams['figure.titlesize'] = 11
 # Color palette
 COLORS = {
     'Random': '#2E86AB',
+    'Random (emb.)': '#2E86AB',
+    'Unit-random': '#4E9F50',
     'PCA': '#A23B72',
     'Spectral': '#F18F01',
     'GNN': '#C73E1D'
@@ -59,23 +61,48 @@ def plot_ablation_comparison(results_file: Path, output_dir: Path):
     
     Figure for Section 8.3: Ablation Analysis
     """
-    # Create synthetic data matching paper results if file doesn't exist
+    # Prefer ablation_results_small_n.csv at N=200; fall back to synthetic defaults
     if not results_file.exists():
-        print(f"⚠️  {results_file} not found, using paper results...")
+        alt = Path('ablation_results_small_n.csv')
+        if alt.exists():
+            results_file = alt
+
+    if results_file.exists():
+        df = pd.read_csv(results_file)
+
+        # If ablation_results_small_n.csv format is used, focus on N=200
+        if 'n' in df.columns:
+            df = df[df['n'] == 200].copy()
+
+        # Drop GNN if present
+        df = df[~df['method'].str.lower().eq('gnn')].copy()
+
+        # Restrict to methods we discuss in the paper
+        method_order = ['pca', 'random', 'unit_random', 'spectral']
+        df['method'] = df['method'].str.lower()
+        df = df[df['method'].isin(method_order)].copy()
+        df['method'] = pd.Categorical(df['method'], categories=method_order, ordered=True)
+        df = df.sort_values('method')
+
+        # Map internal method names to display labels
+        label_map = {
+            'pca': 'PCA',
+            'spectral': 'Spectral',
+            'random': 'Random (emb.)',
+            'unit_random': 'Unit-random'
+        }
+
+        df['Method'] = df['method'].map(label_map)
+        df['RMSE'] = df['rmse']
+        df['Runtime'] = df['runtime']
+    else:
+        print(f"⚠️  {results_file} not found, using synthetic defaults for ablation plot...")
         data = {
-            'method': ['random', 'pca', 'spectral'],
-            'rmse': [1111, 1184, 4820],
-            'runtime': [0.095, 0.111, 0.105]
+            'Method': ['Random (emb.)', 'PCA', 'Spectral'],
+            'RMSE': [1111, 1184, 4820],
+            'Runtime': [0.095, 0.111, 0.105]
         }
         df = pd.DataFrame(data)
-    else:
-        df = pd.read_csv(results_file)
-        # Filter out GNN (removed from paper)
-        df = df[df['method'].str.lower() != 'gnn'].copy()
-    
-    # Normalize column names and method names for display
-    df['method'] = df['method'].str.capitalize()
-    df = df.rename(columns={'method': 'Method', 'rmse': 'RMSE', 'runtime': 'Runtime'})
     
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 3))
     
@@ -84,8 +111,7 @@ def plot_ablation_comparison(results_file: Path, output_dir: Path):
     bars = ax1.bar(df['Method'], df['RMSE'], color=colors, alpha=0.8, edgecolor='black', linewidth=0.5)
     ax1.set_ylabel('RMSE (ATT Estimator)')
     ax1.set_xlabel('Embedding Method')
-    ax1.set_title('(a) Ablation Study: RMSE by Method')
-    ax1.axhline(y=1111, color='gray', linestyle='--', linewidth=0.8, alpha=0.5, label='Random baseline')
+    ax1.set_title('(a) Ablation Study: RMSE by Method (N = 200)')
     
     # Add value labels on bars
     for bar, val in zip(bars, df['RMSE']):
@@ -97,7 +123,7 @@ def plot_ablation_comparison(results_file: Path, output_dir: Path):
     bars2 = ax2.bar(df['Method'], df['Runtime'], color=colors, alpha=0.8, edgecolor='black', linewidth=0.5)
     ax2.set_ylabel('Runtime (seconds)')
     ax2.set_xlabel('Embedding Method')
-    ax2.set_title('(b) Computational Efficiency')
+    ax2.set_title('(b) Computational Efficiency (N = 200)')
     
     # Add value labels
     for bar, val in zip(bars2, df['Runtime']):
@@ -115,51 +141,122 @@ def plot_ablation_comparison(results_file: Path, output_dir: Path):
 def plot_ablation_boxplot(output_dir: Path):
     """Create boxplot of RMSE distributions across methods.
     
-    Shows variability across Monte Carlo replications.
+    Shows variability across Monte Carlo replications using REAL per-replication data.
     """
-    # Simulate distributions based on known means
-    np.random.seed(42)
-    n_reps = 50
+    # Try to read from per-replication CSV files (REAL DATA)
+    per_rep_candidates = [
+        Path('ablation_per_rep_small_n.csv'),
+        Path('results/ablation_per_rep_small_n.csv')
+    ]
     
-    random_dist = np.random.normal(1111, 150, n_reps)
-    pca_dist = np.random.normal(1184, 160, n_reps)
-    spectral_dist = np.random.normal(4820, 800, n_reps)
+    df = None
+    for per_path in per_rep_candidates:
+        if per_path.exists():
+            df = pd.read_csv(per_path)
+            break
     
-    data = {
-        'Method': ['Random']*n_reps + ['PCA']*n_reps + ['Spectral']*n_reps,
-        'RMSE': list(random_dist) + list(pca_dist) + list(spectral_dist)
-    }
-    df = pd.DataFrame(data)
-    
-    fig, ax = plt.subplots(figsize=(6, 4))
-    
-    bp = ax.boxplot([random_dist, pca_dist, spectral_dist],
-                    labels=['Random', 'PCA', 'Spectral'],
-                    patch_artist=True,
-                    widths=0.6,
-                    showfliers=False)
-    
-    # Color the boxes
-    for patch, method in zip(bp['boxes'], ['Random', 'PCA', 'Spectral']):
-        patch.set_facecolor(COLORS[method])
-        patch.set_alpha(0.7)
-    
-    ax.set_ylabel('RMSE (ATT Estimator)')
-    ax.set_xlabel('Embedding Method')
-    ax.set_title('Distribution of RMSE Across 50 Monte Carlo Replications')
-    ax.grid(axis='y', alpha=0.3, linestyle='--')
-    
-    plt.tight_layout()
-    output_file = output_dir / 'ablation_boxplot.pdf'
-    plt.savefig(output_file, bbox_inches='tight')
-    plt.close()
-    print(f"✓ Created {output_file}")
+    if df is not None and 'error' in df.columns and 'method' in df.columns:
+        # Use REAL per-replication data
+        if 'n' in df.columns:
+            df = df[df['n'] == 200].copy()
+        
+        # Calculate RMSE from errors (RMSE = sqrt(mean(error^2)))
+        df['rmse_contrib'] = df['error'] ** 2
+        
+        # Drop GNN if present
+        df['method'] = df['method'].str.lower()
+        df = df[~df['method'].eq('gnn')].copy()
+        
+        # Focus on key methods
+        method_order = ['random', 'pca', 'spectral', 'unit_random']
+        df = df[df['method'].isin(method_order)].copy()
+        
+        label_map = {
+            'pca': 'PCA',
+            'spectral': 'Spectral',
+            'random': 'Random (emb.)',
+            'unit_random': 'Unit-random'
+        }
+        
+        # Group by method and prepare data for boxplot
+        methods_to_plot = []
+        data_to_plot = []
+        colors_to_use = []
+        
+        for method_key in method_order:
+            if method_key not in df['method'].values:
+                continue
+            method_data = df[df['method'] == method_key]['error'].values
+            if len(method_data) > 0:
+                methods_to_plot.append(label_map[method_key])
+                data_to_plot.append(method_data)
+                colors_to_use.append(COLORS.get(label_map[method_key], '#666666'))
+        
+        fig, ax = plt.subplots(figsize=(6, 4))
+        
+        bp = ax.boxplot(data_to_plot,
+                        labels=methods_to_plot,
+                        patch_artist=True,
+                        widths=0.6,
+                        showfliers=False)
+        
+        # Color the boxes
+        for patch, color in zip(bp['boxes'], colors_to_use):
+            patch.set_facecolor(color)
+            patch.set_alpha(0.7)
+        
+        ax.set_ylabel('Error (ATT Estimation)')
+        ax.set_xlabel('Design Method')
+        ax.set_title('Distribution of Errors Across Monte Carlo Replications (N=200)')
+        ax.grid(axis='y', alpha=0.3, linestyle='--')
+        ax.axhline(y=0, color='black', linestyle='-', linewidth=0.5, alpha=0.3)
+        
+        plt.tight_layout()
+        output_file = output_dir / 'ablation_boxplot.pdf'
+        plt.savefig(output_file, bbox_inches='tight')
+        plt.close()
+        print(f"✓ Created {output_file} (using REAL per-replication data)")
+        
+    else:
+        # FALLBACK: Use simulated data if CSV not found
+        print(f"⚠️  Per-replication CSV not found, using synthetic defaults for boxplot...")
+        np.random.seed(42)
+        n_reps = 50
+        
+        random_dist = np.random.normal(1111, 150, n_reps)
+        pca_dist = np.random.normal(1184, 160, n_reps)
+        spectral_dist = np.random.normal(4820, 800, n_reps)
+        
+        fig, ax = plt.subplots(figsize=(6, 4))
+        
+        bp = ax.boxplot([random_dist, pca_dist, spectral_dist],
+                        labels=['Random (emb.)', 'PCA', 'Spectral'],
+                        patch_artist=True,
+                        widths=0.6,
+                        showfliers=False)
+        
+        # Color the boxes
+        for patch, method in zip(bp['boxes'], ['Random (emb.)', 'PCA', 'Spectral']):
+            patch.set_facecolor(COLORS.get(method, '#666666'))
+            patch.set_alpha(0.7)
+        
+        ax.set_ylabel('RMSE (ATT Estimator)')
+        ax.set_xlabel('Embedding Method')
+        ax.set_title('Distribution of RMSE Across Replications (SIMULATED)')
+        ax.grid(axis='y', alpha=0.3, linestyle='--')
+        
+        plt.tight_layout()
+        output_file = output_dir / 'ablation_boxplot.pdf'
+        plt.savefig(output_file, bbox_inches='tight')
+        plt.close()
+        print(f"✓ Created {output_file} (FALLBACK: simulated data)")
 
 
 def plot_power_analysis(output_dir: Path):
     """Create power analysis curves showing detection capability.
     
     Figure for Section 8.1: Statistical Power Analysis
+    NOTE: This figure uses illustrative theoretical curves, not experimental data.
     """
     # Sample sizes and effect sizes
     N_values = [50, 100, 150, 200, 250, 300]
@@ -196,11 +293,15 @@ def plot_power_analysis(output_dir: Path):
         if idx == 0:
             ax.legend(fontsize=8, loc='lower right')
     
+    # Add watermark indicating illustrative nature
+    fig.text(0.99, 0.01, 'Illustrative theoretical curves', 
+            ha='right', va='bottom', fontsize=8, alpha=0.5, style='italic')
+    
     plt.tight_layout()
     output_file = output_dir / 'power_analysis.pdf'
     plt.savefig(output_file, bbox_inches='tight')
     plt.close()
-    print(f"✓ Created {output_file}")
+    print(f"✓ Created {output_file} (illustrative)")
 
 
 def plot_scalability(output_dir: Path):
@@ -270,44 +371,96 @@ def plot_scalability(output_dir: Path):
     print(f"✓ Created {output_file}")
 
 
-def plot_covariate_balance(output_dir: Path):
+def plot_covariate_balance(results_file: Path, output_dir: Path):
     """Create plot showing covariate balance achieved by different methods.
     
     Demonstrates OSD's excellent balance (SMD < 1%)
     """
-    methods = ['Random', 'OSD-PCA', 'Spectral']
-    covariates = ['Income', 'Population', 'Baseline\nRevenue', 'Baseline\nSpend']
-    
-    # Simulated SMD values (percentage)
-    smd_data = {
-        'Random': [0.8, 0.6, 0.9, 0.7],
-        'OSD-PCA': [0.3, 0.4, 0.2, 0.5],
-        'Spectral': [2.1, 1.8, 2.5, 1.9]
-    }
-    
-    fig, ax = plt.subplots(figsize=(8, 4))
-    
-    x = np.arange(len(covariates))
-    width = 0.25
-    
-    for idx, method in enumerate(methods):
-        offset = (idx - 1) * width
-        bars = ax.bar(x + offset, smd_data[method], width, 
-                     label=method, color=COLORS.get(method, '#666666'),
-                     alpha=0.8, edgecolor='black', linewidth=0.5)
-    
-    ax.set_ylabel('Standardized Mean Difference (%)')
-    ax.set_xlabel('Covariate')
-    ax.set_title('Covariate Balance Comparison')
+    # Prefer ablation_results_small_n.csv at N=200; fall back to a simple synthetic pattern
+    df = None
+
+    # 1) Start from the provided results_file if it exists
+    if results_file.exists():
+        df = pd.read_csv(results_file)
+
+    # 2) If no SMD columns are present, try the root-level ablation_results_small_n.csv
+    if (df is None) or ('avg_max_smd' not in df.columns):
+        alt_root = Path('ablation_results_small_n.csv')
+        if alt_root.exists():
+            df_root = pd.read_csv(alt_root)
+            if 'avg_max_smd' in df_root.columns:
+                df = df_root
+
+    # 3) If still missing, try to aggregate from per-replication results
+    if (df is None) or ('avg_max_smd' not in df.columns):
+        per_rep_candidates = [Path('ablation_per_rep_small_n.csv'),
+                              Path('results/ablation_per_rep_small_n.csv')]
+        for per_path in per_rep_candidates:
+            if per_path.exists():
+                per_df = pd.read_csv(per_path)
+                if 'max_smd' not in per_df.columns or 'method' not in per_df.columns:
+                    continue
+                # Focus on N=200 if available
+                if 'n' in per_df.columns:
+                    per_df = per_df[per_df['n'] == 200].copy()
+                if per_df.empty:
+                    continue
+                per_df['method'] = per_df['method'].str.lower()
+                per_df = per_df[~per_df['method'].eq('gnn')]
+                if per_df.empty:
+                    continue
+                agg = per_df.groupby('method', as_index=False)['max_smd'].mean()
+                agg = agg.rename(columns={'max_smd': 'avg_max_smd'})
+                df = agg
+                break
+
+    if df is not None and 'avg_max_smd' in df.columns:
+        if 'n' in df.columns:
+            df = df[df['n'] == 200].copy()
+
+        # Drop GNN if present
+        if 'method' in df.columns:
+            df = df[~df['method'].str.lower().eq('gnn')].copy()
+
+        # Use average max |SMD| as a summary balance metric
+        method_order = ['pca', 'random', 'unit_random', 'spectral']
+        df['method'] = df['method'].str.lower()
+        df = df[df['method'].isin(method_order)].copy()
+        df['method'] = pd.Categorical(df['method'], categories=method_order, ordered=True)
+        df = df.sort_values('method')
+
+        label_map = {
+            'pca': 'PCA',
+            'spectral': 'Spectral',
+            'random': 'Random (emb.)',
+            'unit_random': 'Unit-random'
+        }
+
+        methods = [label_map[m] for m in df['method']]
+        # Convert absolute SMDs to percentage points
+        smd_percent = df['avg_max_smd'].astype(float) * 100.0
+    else:
+        print(f"⚠️  {results_file} not found, using synthetic defaults for covariate balance plot...")
+        methods = ['Random (emb.)', 'PCA', 'Spectral', 'Unit-random']
+        smd_percent = np.array([2.0, 1.0, 4.0, 3.0])
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+
+    x = np.arange(len(methods))
+    bars = ax.bar(x, smd_percent, color=[COLORS.get(m, '#666666') for m in methods],
+                  alpha=0.8, edgecolor='black', linewidth=0.5)
+
+    ax.set_ylabel('Max |SMD| (%)')
+    ax.set_xlabel('Design Method')
+    ax.set_title('Covariate Balance at N = 200 (Max |SMD|)')
     ax.set_xticks(x)
-    ax.set_xticklabels(covariates)
-    ax.legend()
+    ax.set_xticklabels(methods)
     ax.grid(axis='y', alpha=0.3, linestyle='--')
-    
+
     # Add 1% threshold line
-    ax.axhline(y=1.0, color='green', linestyle='--', linewidth=1, 
-              alpha=0.5, label='1% threshold (excellent)')
-    
+    ax.axhline(y=1.0, color='green', linestyle='--', linewidth=1,
+               alpha=0.5, label='1% threshold (excellent)')
+
     plt.tight_layout()
     output_file = output_dir / 'covariate_balance.pdf'
     plt.savefig(output_file, bbox_inches='tight')
@@ -322,13 +475,14 @@ def main():
     
     output_dir = create_output_dirs()
     results_dir = Path('results')
-    
+    ablation_small_n_file = results_dir / 'ablation_results_small_n.csv'
+
     # Generate all plots
-    plot_ablation_comparison(results_dir / 'ablation_results.csv', output_dir)
+    plot_ablation_comparison(ablation_small_n_file, output_dir)
     plot_ablation_boxplot(output_dir)
     plot_power_analysis(output_dir)
     plot_scalability(output_dir)
-    plot_covariate_balance(output_dir)
+    plot_covariate_balance(ablation_small_n_file, output_dir)
     
     print("=" * 60)
     print(f"✓ All plots generated successfully!")

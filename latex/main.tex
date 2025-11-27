@@ -7,7 +7,7 @@
 \date{this version: \today}
 
   \begin{abstract}
-Geographic experiments are a widely-used methodology for measuring incremental return on ad spend (\textit{iROAS}) at scale, yet their design presents significant challenges. The unit count is small, heterogeneity is large, and the optimal Supergeo partitioning problem is NP-hard. We introduce \emph{Optimized Supergeo Design} (OSD), a two-stage framework that renders Supergeo designs practical for large-scale markets. Principal Component Analysis (PCA) first reduces the covariate space to create interpretable geo-embeddings. A Mixed-Integer Linear Programming (MILP) solver then selects a partition that balances both baseline outcomes and pre-treatment covariates. We provide theoretical arguments that OSD's objective value is within $(1+\varepsilon)$ of the global optimum under community-structure assumptions. Rigorous ablation analysis demonstrates that PCA-based clustering achieves statistical parity with unit-level randomization (7\% higher RMSE, not statistically significant) while enabling operational benefits through coarser granularity. Crucially, OSD solves the scalability bottleneck: for $N=210$ markets, OSD completes in 0.22 seconds compared to weeks for exact methods---a speedup of over 5 million times. In extensive simulations with up to 1\,000 units, OSD achieves excellent covariate balance (SMD $<$ 1\%) and retains every media dollar, establishing a scalable framework that matches the statistical efficiency of randomization with the operational practicality of Supergeos.
+Geographic experiments are a widely-used methodology for measuring incremental return on ad spend (\textit{iROAS}) at scale, yet their design presents significant challenges. The unit count is small, heterogeneity is large, and the optimal Supergeo partitioning problem is NP-hard. We introduce \emph{Optimized Supergeo Design} (OSD), a two-stage framework that renders Supergeo designs practical for large-scale markets. Principal Component Analysis (PCA) first reduces the covariate space to create interpretable geo-embeddings. A Mixed-Integer Linear Programming (MILP) solver then selects a partition that balances both baseline outcomes and pre-treatment covariates. We provide theoretical arguments that OSD's objective value is within $(1+\varepsilon)$ of the global optimum under community-structure assumptions. Rigorous ablation analysis on synthetic data shows that PCA- and random-embedding Supergeo designs match unit-level randomisation in estimation error while delivering tighter covariate balance, whereas spectral embeddings substantially worsen both RMSE and balance. Crucially, OSD solves the scalability bottleneck. For $N=210$ markets, OSD completes in a fraction of a second, while exact Supergeo covering MIPs described in prior work are projected to require orders of magnitude longer, on the order of weeks. Scalability experiments up to $N=1\,000$ units show that OSD remains fast without trimming markets. In our main synthetic setting with $N=200$ units, PCA- and random-embedding designs keep covariate imbalance at only a few percentage points while preserving every media dollar, establishing a scalable framework that matches the statistical efficiency of randomisation with the operational practicality of Supergeos.
 \vspace{10pt}
 
 Keywords: Marketing Science, Advertising, Causal Inference, Geographic Experiments, Incremental ROAS, Dimensionality Reduction, Combinatorial Optimisation
@@ -30,9 +30,9 @@ Despite their conceptual power geographic experiments present formidable statist
 
 Researchers have made significant progress in developing specialised methods to address these issues. The Trimmed Match Design framework introduced a robust approach to analysis by systematically trimming outlier pairs to protect against the influence of extreme heterogeneity. A subsequent innovation the Supergeo Design recognised that trimming could introduce bias when treatment effects are themselves heterogeneous. It proposed a generalised matching framework where multiple geos could be grouped into larger supergeos to find better matches without discarding any units. While this elegant solution provides a path to unbiased estimation of the average treatment effect it does so at the cost of transforming the design problem into an NP-hard optimisation task rendering it computationally infeasible for all but the smallest of applications.
 
-This paper introduces Optimized Supergeo Design or OSD, a framework that retains the statistical benefits of the Supergeo concept whilst overcoming its computational limitations. Our contribution is threefold. First we propose a scalable two-stage heuristic algorithm that makes the design of large-scale geographic experiments computationally practical. This method uses Principal Component Analysis (PCA) to create low-dimensional geo-embeddings which are then used to generate candidate supergeos via hierarchical clustering. This reduces the intractable partitioning problem to a manageable optimisation task. Second we introduce a heterogeneity-aware objective function for the design process. This function explicitly balances on observable characteristics that are likely to modify the treatment effect leading to more robust and credible causal estimates. Third we provide rigorous ablation analysis demonstrating that PCA-based embeddings achieve statistical parity with unit-level randomization whilst Graph Neural Networks and other complex methods provide no additional benefit for this problem class.
+This paper introduces Optimized Supergeo Design or OSD, a framework that retains the statistical benefits of the Supergeo concept whilst overcoming its computational limitations. Our contribution is threefold. First we propose a scalable two-stage heuristic algorithm that makes the design of large-scale geographic experiments computationally practical. This method uses Principal Component Analysis (PCA) to create low-dimensional geo-embeddings which are then used to generate candidate supergeos via hierarchical clustering. This reduces the intractable partitioning problem to a manageable optimisation task. Second we introduce a heterogeneity-aware objective function for the design process. This function explicitly balances on observable characteristics that are likely to modify the treatment effect leading to more robust and credible causal estimates. Third we provide rigorous ablation analysis demonstrating that simple PCA-based embeddings perform on par with unit-level randomisation, whilst more complex graph-based embeddings such as spectral methods offer no benefit in this problem class and can even worsen balance.
 
-The remainder of this paper is structured as follows. We begin by formalising the problem of experimental design within the potential outcomes framework. We then present the technical details of the Optimized Supergeo Design methodology including the dimensionality reduction approach and the heterogeneity-aware optimisation. Subsequently we provide theoretical arguments for the quality of our heuristic approach. The performance of our method is then evaluated through extensive simulation studies including a comprehensive ablation analysis that justifies our choice of PCA over more complex alternatives. Finally we conclude with a discussion of the validation results and suggest avenues for future research. All code, data generation scripts, and plot reproduction notebooks are available at \url{https://github.com/shawcharles/osd} to ensure full reproducibility of our results.
+The remainder of this paper is structured as follows. We begin by formalising the problem of experimental design within the potential outcomes framework. We then present the technical details of the Optimized Supergeo Design methodology including the dimensionality reduction approach and the heterogeneity-aware optimisation. Subsequently we provide theoretical arguments for the quality of our heuristic approach. The performance of our method is then evaluated through extensive simulation studies including an ablation analysis that justifies our choice of PCA over more complex alternatives. Finally we conclude with a discussion of the validation results and suggest avenues for future research. All code, data generation scripts, and plot reproduction notebooks are available at \url{https://github.com/shawcharles/osd} to ensure full reproducibility of our results.
 
 \section{Literature Review}
 \label{sec:literature}
@@ -51,7 +51,7 @@ A practical difficulty arises when geographic units are outliers that cannot be 
 
 \subsection{Supergeo Design and Computational Barriers}
 
-To combat poor matches without sacrificing data, \citet{chen2023} introduced Supergeo Design, a generalised matching problem where multiple geos combine to form composite "supergeos." The objective is partitioning all geos into two balanced groups of supergeos, allowing better matches for all units including outliers, thus avoiding trimming. This problem is closely related to minimum-weight matching over hypergraphs \citep{keevash2014geometric}. While conceptually elegant, Supergeo Design is NP-hard, rendering it computationally infeasible beyond small applications (Chen et al. reported "weeks" of computation for N=210 US DMAs). This computational bottleneck motivates the need for scalable heuristics that preserve the method's statistical benefits.
+To combat poor matches without sacrificing data, \citet{chen2023} introduced Supergeo Design, a generalised matching problem where multiple geos combine to form composite "supergeos." The objective is partitioning all geos into two balanced groups of supergeos, allowing better matches for all units including outliers, thus avoiding trimming. This problem is closely related to minimum-weight matching over hypergraphs \citep{keevash2014geometric}. While conceptually elegant, Supergeo Design is NP-hard, rendering it computationally infeasible beyond small applications. Chen et al. \citep{chen2023} note that directly solving the covering MIP for $N=210$ US DMAs can require very long runtimes. This computational bottleneck motivates the need for scalable heuristics that preserve the method's statistical benefits.
 
 \subsection{Alternative Causal Inference Methods}
 
@@ -107,7 +107,7 @@ The core of our contribution is Optimized Supergeo Design or OSD a methodology t
     $$ H = X W_{\text{PCA}} $$
     where $W_{\text{PCA}} \in \mathbb{R}^{p \times d}$ contains the top $d$ principal components. The number of components $d$ is selected to retain 95\% of the total variance or set to a fixed value (e.g., $d=32$) based on the problem size.
 
-    \subsubsection{Rationale for PCA.} Our choice of PCA is motivated by both theoretical and empirical considerations. Theoretically, PCA provides interpretable embeddings along axes of maximum covariate variation, which naturally align with the linear structure of many geographic datasets (e.g., urban vs. rural gradients). Empirically, rigorous ablation analysis (Section~\ref{sec:ablation}) demonstrates that PCA-based clustering achieves statistical parity with unit-level randomization (1.07$\times$ RMSE ratio, not statistically significant), whilst Spectral embedding introduces substantial bias due to over-tight clustering (4.3$\times$ RMSE ratio). The simplicity of PCA also eliminates hyperparameter tuning and ensures deterministic, reproducible embeddings.
+    \subsubsection{Rationale for PCA.} Our choice of PCA is motivated by both theoretical and empirical considerations. Theoretically, PCA provides interpretable embeddings along axes of maximum covariate variation, which naturally align with the roughly linear structure of many geographic datasets such as urban--rural and income gradients. Empirically, our ablation study (Section~\ref{sec:ablation}) shows that PCA-based Supergeo designs match unit-level randomisation in RMSE while delivering tighter covariate balance, and that spectral embeddings perform clearly worse by creating over-tight, homogeneous clusters. The simplicity of PCA also removes the need for delicate hyperparameter tuning and yields deterministic, reproducible embeddings.
 
     Once we compute the PCA embeddings $H$, we apply Hierarchical Agglomerative Clustering \citep{ward1963hierarchical} with Ward's linkage to identify cohesive groups. We cut the dendrogram at a specified number of clusters $M$ (typically 10\% of $N$) to produce a diverse set of candidate supergeo partitions $\mathcal{C} = \{C_1, C_2, \dots, C_M\}$.
 
@@ -123,12 +123,10 @@ The core of our contribution is Optimized Supergeo Design or OSD a methodology t
     subject to
     $$ \sum_{j=1}^{M} z_j = 1 \quad \text{(select exactly one partition)} $$
     $$ \sum_{k \in \{T,C\}} y_{sk} = 1 \quad \forall s \in C_j \text{ if } z_j=1 \quad \text{(assign each supergeo to one group)} $$
-    This problem is solved efficiently using the `scipy.optimize.milp` solver (or similar exact solvers). To handle the absolute value terms in the objective function within a linear programming framework, we employ standard auxiliary variables. Specifically, for each covariate $k$, we introduce a non-negative continuous variable $u_k$ and impose constraints such that $u_k \ge \text{Difference}_k$ and $u_k \ge -\text{Difference}_k$. We then minimise the weighted sum of these $u_k$ terms. By creating groups that are well-balanced on the distributions of these key covariates we produce a design that is explicitly prepared for a subsequent high-precision distributional treatment effect analysis.
+    This problem is solved efficiently using the `scipy.optimize.milp` solver (or similar exact solvers). While the MILP optimisation problem is NP-hard in general, modern branch-and-bound solvers achieve practical tractability for moderate problem sizes ($N \le 1000$) by exploiting sparsity and pruning the search tree. The 30-second time limit we impose ensures the solver returns a high-quality feasible solution even when the global optimum remains unproven. To handle the absolute value terms in the objective function within a linear programming framework, we employ standard auxiliary variables. Specifically, for each covariate $k$, we introduce a non-negative continuous variable $u_k$ and impose constraints such that $u_k \ge \text{Difference}_k$ and $u_k \ge -\text{Difference}_k$. We then minimise the weighted sum of these $u_k$ terms. By creating groups that are well-balanced on the distributions of these key covariates we produce a design that is explicitly prepared for a subsequent high-precision distributional treatment effect analysis.
 
     \subsection{Hyperparameter Tuning and Validation Framework}
-    The choice of the regularisation parameters $\lambda_m$ is critical to the performance of the design. We perform a $K{=}5$-fold cross-validation over a logarithmic grid of $\lambda_m$ values. For each candidate vector $\boldsymbol{\lambda}$ we: (i) generate a design on the training folds and (ii) estimate the \emph{expected RMSE of the iROAS estimator} on the held-out fold via a fast Monte-Carlo power simulation. As a tie-breaker we also monitor the mean absolute SMD (MASMD) across modifiers to ensure that a low predicted RMSE is not obtained at the cost of severe imbalance. The selected $\boldsymbol{\lambda}^*$ lies on the Pareto frontier of (RMSE, MASMD) and minimises the RMSE criterion.
-    
-    Our validation framework extends beyond hyperparameter optimization to include systematic robustness testing across diverse experimental conditions, statistical power analysis with confidence interval estimation, and computational efficiency assessment. This multi-faceted validation approach ensures method reliability and provides practical implementation guidance with enhanced visualizations supporting all empirical findings.
+    The choice of the regularisation parameters $\lambda_m$ is critical to the performance of the design. In the current implementation we adopt a simple and transparent choice: all covariates entering the cost function are assigned equal weights (i.e., $\lambda_m = 1$ for all modifiers), which worked well across the scenarios we considered. In principle one could perform a $K$-fold cross-validation over a grid of $\lambda_m$ values, trading off predicted RMSE of the iROAS estimator against mean absolute SMD, but we leave a full hyperparameter tuning framework and an extensive validation study to future work.
 
 
 \section{Theoretical Properties}
@@ -148,6 +146,11 @@ While Optimized Supergeo Design is a heuristic approach to an NP-hard problem it
     Let $f: \mathcal{X} \to \mathbb{R}^d$ be the PCA embedding function where $f(X) = X W_{\text{PCA}}$ and $W_{\text{PCA}} \in \mathbb{R}^{p \times d}$ contains the top $d$ principal components. We assume $d$ is chosen to retain at least $\gamma$ fraction of the total variance (typically $\gamma = 0.95$). This ensures the low-dimensional embedding preserves the essential structure of the covariate space, including the separation between natural groupings of geographic units.
     \end{assumption}
 
+    \begin{assumption}[Lipschitz PCA Embedding]\label{assump:lipschitz}
+    The PCA projection $f(X) = X W_{\text{PCA}}$ is $L$-Lipschitz with respect to the Euclidean norm, i.e.
+    $\|f(x) - f(x')\|_2 \le L \, \|x - x'\|_2$ for all $x,x' \in \mathcal{X}$, where $L := \|W_{\text{PCA}}\|_2$ denotes the operator norm of $W_{\text{PCA}}$.
+    \end{assumption}
+
     \subsection{Approximation Guarantees}
     Under these assumptions we can provide a probabilistic guarantee on the quality of the solution found by our two-stage heuristic relative to the true but computationally unobtainable optimal solution. Let a partition of the geos into treatment and control groups be denoted by $\mathcal{P} = (\mathcal{G}_T, \mathcal{G}_C)$. We define the cost of a partition as the value of our heterogeneity-aware objective function
     $$ \text{Cost}(\mathcal{P}) = \text{SMD}(\text{Baseline}; \mathcal{P}) + \sum_{m} \lambda_m \cdot \text{SMD}(\text{Modifier}_m; \mathcal{P}) $$
@@ -159,14 +162,16 @@ While Optimized Supergeo Design is a heuristic approach to an NP-hard problem it
     \begin{proposition}\label{prop:approx}
     Let $\mathcal{G}$ be a graph with a $(\rho_{in},\rho_{out})$–community structure and let $f$ be the PCA embedding function retaining $\gamma$ fraction of variance. Denote by $\Delta:=\max_{v\in V}\min_{c} \|f(X_v)-\mu_{c}\|$ the worst–case embedding distortion relative to the centroid $\mu_{c}$ of the true community containing $v$. Define
     \[
-        \varepsilon := \kappa_1\,\frac{\rho_{out}}{\rho_{in}-\rho_{out}} + \kappa_2\,\Delta, \quad \text{for constants }\kappa_1,\kappa_2>0.
+        \varepsilon := \kappa_1\,\frac{\rho_{out}}{\rho_{in}-\rho_{out}} + \kappa_2\,\Delta,
     \]
-    Let $\mathcal{P}_{opt}$ be the partition that minimises $\text{Cost}(\mathcal{P})$ and let $\mathcal{P}_{OSD}$ be the partition returned by Optimized Supergeo Design. Then, with high probability over the stochasticity of hierarchical clustering cuts, we have
+    where the positive constants $\kappa_1,\kappa_2$ depend only on the number of covariates entering the cost and on the Lipschitz constant $L$ of $f$ (they do not depend on $N$ or on the particular realisation of $\mathcal{G}$). Let $\mathcal{P}_{opt}$ be the partition that minimises $\text{Cost}(\mathcal{P})$ and let $\mathcal{P}_{OSD}$ be the partition returned by Optimized Supergeo Design. Then, with high probability over the stochasticity of hierarchical clustering cuts, we have
     $$
         \text{Cost}(\mathcal{P}_{OSD}) \le (1+\varepsilon)\,\text{Cost}(\mathcal{P}_{opt}).
     $$
     The bound tightens as communities become more separated (large $\rho_{in}-\rho_{out}$) and embedding distortion decreases (small $\Delta$).
     \end{proposition}
+
+    This result should be read as a qualitative guarantee rather than a plug-in formula for practitioners; in applications we assess OSD's performance primarily through empirical simulations and ablation studies.
 
     In essence, the result suggests that OSD is near–optimal whenever geographic regions are naturally distinct and the dimensionality reduction preserves this structure. Importantly, conditional on the candidate set $\mathcal{C}$ produced in Stage 1, the MILP solved in Stage 2 returns a high-quality solution (often optimal for small instances or when given sufficient time). Thus residual approximation error largely arises from any omission of the truly optimal supergeo partition from $\mathcal{C}$. The proposition therefore characterises how structural properties of the data and the embedding quality jointly control this error.
 
@@ -174,155 +179,35 @@ While Optimized Supergeo Design is a heuristic approach to an NP-hard problem it
 
 \section{Limitations}
 \label{sec:limitations}
-While OSD offers advantages in scalability and operational efficiency, it is important to acknowledge its limitations. First, our ablation analysis (Section~\ref{sec:ablation}) demonstrates that PCA-based Supergeo formation achieves statistical parity with unit-level randomization (7\% higher RMSE, not statistically significant). This implies that OSD does not \emph{improve} upon randomization in terms of statistical precision—it merely matches it. The value proposition is therefore operational: enabling coarser granularity for media buying (e.g., purchasing at the Supergeo level) without sacrificing statistical power. Practitioners with fine-grained randomization infrastructure may prefer pure randomization for simplicity.
+While OSD offers advantages in scalability and operational efficiency, it is important to acknowledge its limitations. First, our ablation analysis (Section~\ref{sec:ablation}) shows that PCA- and random-embedding Supergeo designs match unit-level randomisation in RMSE at $N=200$ while delivering tighter covariate balance, whereas spectral embeddings perform clearly worse. OSD therefore does not \emph{dominate} randomisation in terms of statistical precision. Its primary value lies in enabling coarser granularity for media buying (for example purchasing at the Supergeo level) without sacrificing precision relative to a well-run randomised design. Practitioners with fine-grained randomisation infrastructure may still prefer pure randomisation for simplicity.
 
 Second, unlike pure randomisation or recent advances such as Gram–Schmidt Random Walks \citep{harshaw2024balancing}, our deterministic optimisation approach does not guarantee balance on unobserved confounders. Our method minimises conditional bias on \emph{observed} covariates, but it relies on the assumption that these covariates capture the primary sources of heterogeneity. If there are strong unmeasured confounders uncorrelated with observed features, the design may still yield biased estimates.
 
-Third, the performance of candidate generation is contingent on the quality and richness of input features. Our ablation study demonstrates that Spectral embedding, whilst capturing graph structure, introduces substantial bias (4.3$\times$ RMSE degradation) through over-tight clustering. This underscores a fundamental principle: method complexity should match problem complexity. For geographic experiments with linear covariate structure, PCA suffices; graph-based embeddings may introduce unnecessary complexity.
+Third, the performance of candidate generation is contingent on the quality and richness of input features. Our ablation study demonstrates that Spectral embedding, whilst capturing graph structure, delivers substantially higher RMSE and worse covariate balance than PCA because it creates overly tight, homogeneous clusters. This underscores a fundamental principle: method complexity should match problem complexity. For geographic experiments with roughly linear covariate structure, PCA suffices and more elaborate graph-based embeddings may introduce unnecessary complexity.
 
 Finally, our theoretical guarantees rest on assumptions about community structure and embedding smoothness. In practice, geographic data may not exhibit clean structure, potentially degrading candidate quality. The selection of which covariates to treat as effect modifiers also requires domain expertise. Including irrelevant covariates reduces efficiency by forcing balance on noise.
 
 \section{Statistical Methodology}
 \label{sec:statistical_methodology}
 
-To ensure robust statistical inference and meet the rigorous standards expected in academic publication, our evaluation employs formal hypothesis testing with appropriate corrections for multiple comparisons. This methodological enhancement addresses potential concerns about the statistical validity of performance claims.
+To support quantitative comparisons between design methods, we complement point estimates with uncertainty quantification and formal hypothesis tests that are implemented in the public codebase.
 
 \subsection{Simulation Design and Sample Size}
 
-We conduct 100 Monte Carlo replications for each experimental condition, representing a substantial increase from preliminary analyses. This sample size provides adequate statistical power (> 0.8) to detect meaningful effect sizes whilst controlling Type I error rates. Each replication uses identical synthetic datasets across all methods to ensure paired comparisons and reduce variance.
+For each experimental condition (e.g., sample size $N$ and data-generating process parameters) we conduct $50$ Monte Carlo replications. Each replication draws a fresh synthetic dataset and evaluates all methods on the same draw, yielding paired observations of estimation error for each method. From these errors we compute root-mean-squared error (RMSE), bias, and covariate-balance summaries.
 
 \subsection{Statistical Testing Framework}
 
-For pairwise method comparisons, we employ paired t-tests when normality assumptions are satisfied (verified using Shapiro-Wilk tests) and Wilcoxon signed-rank tests otherwise. To control family-wise error rates across multiple comparisons, we apply Holm-Bonferroni correction, which provides greater power than the conservative Bonferroni correction whilst maintaining strong control of Type I error.
+For pairwise method comparisons we perform paired $t$-tests on the per-replication squared errors, which directly target differences in RMSE. Within each sample-size setting we test all method pairs and adjust the resulting $p$-values using the Holm--Bonferroni procedure to control the family-wise error rate. We also report Cohen's $d$ effect sizes based on the distribution of paired squared-error differences, providing a scale-free measure of practical significance.
 
-Effect sizes are quantified using Cohen's d for practical significance assessment, with thresholds of 0.2, 0.5, and 0.8 representing small, medium, and large effects respectively. Bootstrap confidence intervals (95\% coverage) provide robust uncertainty quantification for all performance metrics.
+\subsection{Bootstrap Confidence Intervals}
 
-\subsection{Power Analysis}
+For each method and experimental condition we report 95\% confidence intervals for RMSE and bias obtained via a simple percentile bootstrap. Specifically, we resample the Monte Carlo replications with replacement and recompute the statistic of interest on each bootstrap sample. The 2.5th and 97.5th percentiles of the resulting bootstrap distribution form the reported interval. These intervals, together with the paired tests, quantify both the magnitude and uncertainty of performance differences between methods.
 
-Post-hoc power analysis confirms that our simulation design achieves adequate statistical power for detecting meaningful differences between methods. With 100 replications and observed effect sizes exceeding 0.8, achieved power exceeds 0.99 for all pairwise comparisons, providing strong evidence against Type II errors.
-
-\section{Methodological Validation}
+\section{Methodological Validation and Practical Significance}
 \label{sec:methodological_validation}
 
-To ensure the robustness and reliability of the Optimized Supergeo Design methodology, we conduct methodological validation across three critical dimensions: cross-validation analysis, robustness testing, and hyperparameter sensitivity analysis. This validation framework addresses potential concerns about the method's performance under varying conditions and provides guidance for practical implementation.
-
-\subsection{Cross-Validation Framework}
-
-We implement a spatially-aware cross-validation framework to validate the quality of learned geo-embeddings. Stratified k-fold validation with geographic clustering ensures that validation splits respect spatial dependencies. We compute five embedding quality metrics. The silhouette score measures cluster cohesion and separation. The Calinski-Harabasz index evaluates cluster density and separation. The Davies-Bouldin index assesses cluster compactness and distinctness. The inertia ratio quantifies within-cluster variance reduction. Finally, modularity measures community structure quality in the geographic network.
-
-Cross-validation confirms that PCA embeddings capture meaningful geographic relationships. Performance remains consistent across different data splits and problem sizes.
-
-\subsection{Robustness Testing}
-
-We conduct four robustness tests to evaluate method performance under challenging conditions:
-
-\subsubsection{Community Structure Robustness}
-We test performance degradation by adding increasing levels of noise to geographic relationships, violating community structure assumptions. OSD degrades gracefully and maintains effectiveness even with moderate violations.
-
-\subsubsection{Heterogeneity Sensitivity Analysis}
-We evaluate performance across varying levels of treatment effect heterogeneity (0.5× to 3.0× baseline levels). OSD maintains stable performance across all heterogeneity levels. The optimization component provides particular benefits in high-heterogeneity scenarios.
-
-\subsubsection{Sample Size Effects}
-Scalability analysis across problem sizes from 50 to 400 geographic units confirms sub-quadratic computational complexity. Performance metrics remain stable across different sample sizes, demonstrating the method's practical applicability to both small and large-scale experiments.
-
-\subsubsection{Covariate Imbalance Robustness}
-We test robustness under systematic baseline covariate imbalances. The heterogeneity-aware objective function successfully maintains balance even under challenging imbalance scenarios, ensuring practical applicability to real-world datasets with inherent imbalances.
-
-\subsection{Hyperparameter Sensitivity Analysis}
-
-hyperparameter analysis identifies optimal configurations and assesses sensitivity to parameter choices:
-
-\subsubsection{Embedding Dimension Optimization}
-Grid search across embedding dimensions (8, 16, 32, 64, 128) and problem sizes reveals that optimal embedding dimension scales approximately as 10-20\% of the number of geographic units. Higher dimensions provide diminishing returns while increasing computational cost.
-
-\subsubsection{Similarity Threshold Analysis}
-Analysis of clustering similarity thresholds (0.2 to 0.8) across four clustering methods (ward, complete, average, single) shows that thresholds around 0.4-0.6 provide optimal clustering quality across different geographic structures.
-
-\subsubsection{Batch Size Optimization}
-Batch size analysis (8, 16, 32, 64, 128) across different problem sizes identifies clear trade-offs between training stability and computational efficiency. Optimal batch sizes scale with problem complexity, with larger problems benefiting from larger batch sizes.
-
-\subsection{Validation Summary}
-
-The methodological validation achieves consistent performance across all test scenarios, confirming the robustness and reliability of the OSD framework. Key findings from this validation include the method's robust performance, which maintains its effectiveness even under conditions of community structure violations, heterogeneity variations, and covariate imbalances.
-
-Additionally, the framework's architecture has been confirmed to be scalable, demonstrating sub-quadratic computational complexity while maintaining stable performance across various problem sizes. The validation process also identified Pareto-optimal hyperparameter configurations, which effectively balance performance with computational cost.
-
-Furthermore, the practical applicability of the framework has been established, with the validation framework providing clear implementation guidelines for real-world deployment.
-
-These validation results provide strong evidence for the method's reliability and offer practical guidance for implementation in diverse geographic experimental settings.
-
-\section{Practical Significance Analysis}
-\label{sec:practical_significance}
-
-To complement our methodological validation, we conduct practical significance analysis examining statistical power characteristics and computational efficiency across realistic experimental scenarios. This analysis provides essential guidance for practitioners implementing OSD in real-world settings.
-
-\subsection{Statistical Power Analysis}
-
-We evaluate statistical power across multiple sample sizes and effect sizes to establish practical implementation guidelines. Our analysis examines power characteristics for detecting treatment effects ranging from very small (0.1 standard deviations) to large (1.0 standard deviations) across sample sizes from 50 to 300 geographic units.
-
-\subsubsection{Power Analysis Methodology}
-
-For each combination of sample size $N \in \{50, 100, 150, 200, 250, 300\}$ and standardised effect size $\delta \in \{0.1, 0.25, 0.5, 0.75, 1.0\}$, we conduct 100 Monte Carlo replications. Each replication proceeds in four steps. First, we generate a synthetic geographic dataset with specified parameters. Second, we apply three design methods: OSD, Trimmed Match (TM), and Supergeo (SG). Third, we conduct statistical inference using two-sample t-tests. Fourth, we record whether the true treatment effect is detected at $\alpha = 0.05$ significance level.
-
-We calculate statistical power as the proportion of replications achieving significant results. This provides empirical power estimates across the experimental parameter space.
-
-\subsubsection{Power Analysis Results}
-
-Our power analysis reveals distinct performance patterns across methods and effect sizes:
-
-%\textbf{Superior Sensitivity for Medium-to-Large Effects.} 
-Both OSD and SG demonstrate high power for detecting effects of 0.25 standard deviations or larger across all sample sizes. This sensitivity provides confidence in detecting practically meaningful treatment effects.
-
-%\textbf{Robust Performance Across Sample Sizes.}
-For effect sizes $\geq 0.5$, all three methods achieve perfect power (100\%) regardless of sample size, indicating robust detection capability for moderate-to-large effects.
-
-%\textbf{Critical Sample Size Thresholds.} 
-For smaller effects (0.25 standard deviations), sample sizes of N=100-150 provide adequate power ($>80\%$) for OSD and SG, while TM requires larger samples for reliable detection.
-
-%\textbf{Very Small Effect Limitations.} 
-Effects of 0.1 standard deviations prove challenging for all methods, with power remaining below 50\% even at large sample sizes, suggesting fundamental limitations in detecting very small treatment effects in geographic experiments.
-
-\subsection{Computational Efficiency Analysis}
-
-We implement computational efficiency analysis measuring execution time, memory usage, and scalability characteristics across different sample sizes.
-
-\subsubsection{Efficiency Analysis Framework}
-
-The computational efficiency framework employed in this study incorporates several key methodologies. Execution times are measured with precision timing at a microsecond resolution. Additionally, memory usage is profiled in real-time throughout the execution of the method. The framework also includes a scalability assessment, which involves a time-per-unit analysis to characterize computational complexity. Furthermore, a systematic evaluation is conducted, ensuring consistent measurement across various sample sizes ranging from 50 to 300 units.
-
-\subsubsection{Computational Infrastructure}
-
-The analysis establishes a robust infrastructure for computational measurement, encompassing several critical components.
-
-A high-precision timing infrastructure is implemented to measure execution times, complete with systematic error handling and outlier detection mechanisms.
-
-Additionally, memory monitoring is conducted at the process level, facilitating detailed tracking of resource consumption and providing usage profiles.
-
-The framework also includes scalability metrics, which involve time-per-unit calculations to assess computational complexity and predict performance outcomes.
-
-Furthermore, a benchmarking foundation is established through standardized measurement protocols, thereby supporting continuous performance evaluation and comparative analysis of methods.
-
-\subsection{Practical Implementation Guidance}
-
-Based on our power and efficiency analyses, we provide specific recommendations for practitioners:
-
-\subsubsection{Sample Size Recommendations}
-
-Our power analysis yields practical guidance for sample size selection. A minimum viable sample requires 100 to 150 geographic units for detecting moderate effects ($\geq 0.25$ standard deviations). The optimal range lies between 150 and 200 units, balancing statistical power with computational efficiency. Large-scale studies with 250 or more units provide maximum precision and robustness.
-
-\subsubsection{Effect Size Considerations}
-
-The magnitude of the treatment effect determines detectability. Effects of 0.25 standard deviations or larger are consistently detectable across all sample sizes we tested. Effects of 0.5 standard deviations or larger achieve perfect power regardless of sample size, indicating robust detection capability. Very small effects below 0.2 standard deviations may require alternative experimental approaches or substantially larger samples.
-
-\subsubsection{Method Selection Guidelines}
-
-The OSD methodology presents distinct advantages, notably its strong power characteristics combined with computational scalability and operational flexibility through Supergeo formation.
-
-In comparison, Supergeo demonstrates similar power to OSD but may face computational limitations at larger scales.
-
-However, the Trimmed Match method exhibits certain limitations, particularly a reduced sensitivity to smaller effects, necessitating larger sample sizes for effective analysis.
-
-These findings on practical significance provide essential guidance for the implementation of OSD methodology in real-world geographic experiments. They ensure the maintenance of adequate statistical power while preserving computational feasibility.
+To keep the main text focused on the core method and key experiments, we relegate detailed validation diagnostics, robustness checks, power sketches, and implementation advice to an online appendix titled ``Validation and Implementation Playbook''. That appendix outlines cross-validation checks for embeddings, stress tests under alternative data-generating regimes, simple power calculations, and computational profiling that practitioners can adapt to their own settings.
 
 \section{Experiments}
 \label{sec:experiments}
@@ -330,95 +215,74 @@ These findings on practical significance provide essential guidance for the impl
 % Experiments / Simulation studies results
 
 \subsection{Synthetic Data Generating Process}
-We simulate $N=200$ Designated Market Areas (DMAs) per replication. Baseline weekly revenue $R_i$ follows a \textit{log--normal} distribution, $\log R_i \sim \mathcal{N}(\mu=10,\,\sigma=0.5)$ (all revenue figures are in US\,\$). Media spend $S_i$ is generated from a heteroskedastic model
-\begin{equation}
-S_i = 0.12 \times R_i\bigl(1 + \varepsilon_i\bigr), \qquad \varepsilon_i \sim \mathcal{N}(0,0.10^2),
-\end{equation}
-reflecting typical spend--to--revenue ratios observed in large performance campaigns.
+We simulate $N=200$ geographic units per replication, designed to mimic heterogeneous urban and rural markets with both observed and unobserved effect modifiers. All simulations are generated by the publicly released function \texttt{generate\_synthetic\_data} in our codebase.
 
-We set the ground--truth incremental return on ad spend (iROAS) to $\rho^{\star}=2.0$.  To introduce treatment--effect heterogeneity we scale the individual effect by a centred revenue multiplier:
-\begin{equation}
-\tau_i = \rho^{\star} S_i\Bigl[1 + 0.5\,\bigl(R_i/\bar{R}-1\bigr)\Bigr],
-\end{equation}
-where $\bar{R}$ is the mean baseline revenue across DMAs.  This specification implies that high--revenue markets have larger absolute but similar \emph{relative} lift, a pattern often observed in practice.
+For each unit $i$ we first draw spatial coordinates on the unit square and construct an unobserved spatial factor $U_i$ via a smoothed radial--basis function field. We then assign an ``urban'' indicator $Z_i \in \{0,1\}$ with $\mathbb P(Z_i=1)=0.3$. Baseline weekly revenue $R_i$ follows a mixture of log--normal distributions: urban markets have higher mean and variance than rural markets. Media spend $S_i$ is generated as a noisy multiplicative function of revenue with different spend--to--revenue ratios by urban status, reflecting typical patterns in large performance campaigns.
 
-Each Monte Carlo replication draws fresh $\{R_i,S_i,\tau_i\}$ and evaluates three design pipelines using \texttt{TM-Baseline}, \texttt{SG-TM}, and \texttt{OSD-TM}. To ensure robust statistical inference, we conduct 100 Monte Carlo replications (increased from the preliminary 15-replication analysis) and apply formal hypothesis testing with appropriate multiple comparison corrections.
+Observed covariates include population and household income. Population is a scaled version of revenue that differs by urban/rural status, while income is drawn from normal distributions with higher means and variances in urban markets. The spatial factor $U_i$ is added to income to induce correlation between geography and observed covariates, and also serves as an unobserved effect modifier.
+
+Treatment effects are generated as
+\begin{equation}
+\tau_i 
+  = \theta \, S_i\Bigl\{1 + \gamma \bigl[ (1-\lambda) H_i + \lambda U_i \bigr]\Bigr\},
+\end{equation}
+where $H_i$ is an observed heterogeneity index combining urban status and a standardised revenue score, $U_i$ is the unobserved spatial driver, $\theta$ is the base lift factor (average iROAS), $\gamma$ controls the strength of heterogeneity, and $\lambda \in [0,1]$ controls the share of unobserved (spatial) heterogeneity. In our main experiments we set $\theta = 0.1$ (i.e., a 10\% incremental return per dollar of spend), $\gamma = 0.5$, and $\lambda = 0.2$, and we additionally consider a non-linear variant in which $H_i$ includes a quadratic term in demeaned income to create more challenging, non-linear effect modification.
+
+Each Monte Carlo replication draws fresh $\{R_i,S_i,\tau_i\}$ and evaluates the competing design methods described in Section~\ref{sec:experiments}. The full data-generating process, including all distributional parameters, is documented in the code and can be inspected and modified by readers.
 
 \subsection{Computational Environment}
 All simulations run under Python~3.10 on an \texttt{Intel Xeon Gold~6230R} (2.1~GHz, 32~cores). The MILP solver (\texttt{scipy.optimize.milp} via HiGHS) is configured with a 30~s time limit per design. Plotting uses \texttt{matplotlib}~3.7.  Full source code and seeds are available in the project repository for reproducibility.
 
-
-\begin{table}[H]
-    \centering
-    \caption{Enhanced synthetic experiment results comparing design pipelines ($N=200$ geos, 100 Monte Carlo replications). Lower RMSE and $|$Bias$|$ values indicate superior performance. Mean Balance is defined as the sum of the absolute Standardized Mean Differences across all covariates. Lower values indicate better balance. Bootstrap 95\% confidence intervals shown in brackets.}
-    \label{tab:synthetic_results}
-    \begin{tabular}{lcccc}
-        \toprule
-        Method & Mean Estimate & RMSE & Mean $|$Bias$|$ & Mean Balance \\
-        \midrule
-        TM-Baseline & 2.000 [1.996, 2.004] & 0.074 [0.067, 0.081] & 0.059 [0.053, 0.065] & 30\,104 \\
-        SG-TM & 1.995 [1.988, 2.002] & 0.066 [0.059, 0.073] & 0.052 [0.046, 0.058] & 146\,098 \\
-        OSD-TM & \textbf{2.000 [1.995, 2.005]} & \textbf{0.024 [0.021, 0.027]} & \textbf{0.017 [0.014, 0.020]} & \textbf{270} \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-% Absolute bias distribution
-\begin{figure}[t!]
-    \centering
-    \includegraphics[width=0.5\linewidth]{ablation_boxplot.pdf}
-    \caption{Distribution of RMSE across 50 Monte Carlo replications. OSD with PCA achieves statistical parity with randomization, while Spectral embedding introduces substantial bias through over-tight clustering.}
-    \label{fig:abs_bias_box}
-\end{figure}
-
-% RMSE bar plot
-% Figure removed - use ablation_comparison.pdf instead
-% \begin{figure}[htb!]
-%     \centering
-%     \includegraphics[width=0.5\linewidth]{rmse_bar.pdf}
-%     \caption{Root Mean Square Error (RMSE) across 100 heterogeneous replications. OSD achieves the lowest error, indicating the best bias--variance trade\,off among the evaluated designs.}
-%     \label{fig:rmse_bar}
-% \end{figure}
-
-\subsection{Statistical Significance Testing}
-
-To establish the statistical significance of performance differences between methods, we conduct pairwise comparisons using appropriate statistical tests. Given the paired nature of our simulation design (each method evaluated on identical synthetic datasets), we employ paired t-tests when normality assumptions are satisfied and Wilcoxon signed-rank tests otherwise. Multiple comparison corrections are applied using the Holm-Bonferroni method to control the family-wise error rate.
-
-\begin{table}[H]
-    \centering
-    \caption{Pairwise statistical comparisons of absolute bias performance. Effect sizes quantified using Cohen's d.}
-    \label{tab:statistical_tests}
-    \begin{tabular}{lccc}
-        \toprule
-        Comparison & p-value & Corrected p-value & Effect Size (Cohen's d) \\
-        \midrule
-        TM-Baseline vs SG-TM & $<0.001$ & $<0.001$ & 1.092 (large) \\
-        TM-Baseline vs OSD-TM & $<0.001$ & $<0.001$ & 1.021 (large) \\
-        SG-TM vs OSD-TM & $<0.001$ & $<0.001$ & 0.845 (large) \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-All pairwise comparisons achieve statistical significance at the $\alpha = 0.05$ level after multiple comparison correction. The large effect sizes (Cohen's d > 0.8) indicate that the observed differences are not only statistically significant but also practically meaningful.
-
-\subsubsection{Managerial interpretation} For practitioners, a Root Mean Square Error of 0.074 iROAS translates into an average absolute error of \$37\,000 in incremental revenue per \$1\,million of media spend (assuming a true iROAS of 2). The OSD pipeline therefore limits decision risk to under 2\% of budget, while the competing SG design exposes brands to errors exceeding 6\%. Statistical testing confirms that OSD's strong performance is highly significant (p < 0.001) with large practical effect sizes, providing evidence for its value in real-world applications.
-
 \subsection{Ablation Analysis: Embedding Method Comparison}
 \label{sec:ablation}
 
-To validate our choice of PCA for candidate generation, we conducted a rigorous ablation study comparing three embedding approaches across 50 Monte Carlo replications with N=200 geographic units. The synthetic data incorporated multi-modal structure (urban vs. rural markets with differing revenue distributions) and a 10\% covariate-driven temporal trend (high-income areas grow faster), creating a challenging scenario for balancing methods.
+To validate our choice of PCA for candidate generation, we conducted an ablation study comparing three Supergeo embedding methods (PCA, spectral, and random embeddings) against a unit-level randomization baseline across 50 Monte Carlo replications for two sample sizes ($N=40$ and $N=200$). The synthetic data incorporated multi-modal structure (urban vs. rural markets with differing revenue distributions) and a 10\% covariate-driven temporal trend (high-income areas grow faster), creating a challenging scenario for balancing methods.
 
 \begin{table}[H]
     \centering
-    \caption{Ablation Study: Impact of Embedding Method on ATT Estimator Performance. All Supergeo methods use identical MILP solver for Stage 2. Lower RMSE indicates better performance. RMSE values from 50 Monte Carlo replications with covariate-driven trends.}
+    \caption{Ablation results on synthetic experiments for two sample sizes ($N=40$ and $N=200$). Values are averaged over 50 Monte Carlo replications. RMSE and Bias columns report point estimates with 95\% bootstrap confidence intervals in brackets. Avg max~$|$SMD$|$ and Avg mean~$|$SMD$|$ summarise covariate balance across response, spend, income, and population.}
     \label{tab:ablation}
-    \begin{tabular}{lrrr}
+    \begin{tabular}{llcccc}
         \toprule
-        Embedding Method & RMSE & Relative to Random & Runtime (s) \\
+        $N$ & Method & RMSE & Bias & Avg max $|$SMD$|$ & Avg mean $|$SMD$|$ \\
         \midrule
-        Random (Unit-Level) & 1,111 & 1.00$\times$ & 0.095 \\
-        \textbf{PCA (Proposed)} & \textbf{1,184} & \textbf{1.07}$\times$ & \textbf{0.111} \\
-        Spectral Embedding & 4,820 & 4.34$\times$ & 0.105 \\
+        \multicolumn{6}{l}{\textbf{$N=40$}} \\
+        \midrule
+        40 & PCA &
+        34\,873 [25\,506, 44\,866] &
+        $-4\,995$ [$-14\,977$, 4\,424] &
+        1.14 & 0.61 \\
+        40 & Spectral &
+        70\,653 [51\,021, 90\,964] &
+        10\,191 [$-8\,072$, 30\,259] &
+        1.15 & 0.62 \\
+        40 & Random (emb.) &
+        8\,113 [6\,061, 10\,272] &
+        $-1\,561$ [$-3\,798$, 584] &
+        1.13 & 0.58 \\
+        40 & Unit-random &
+        9\,280 [6\,634, 12\,003] &
+        $-18$ [$-2\,734$, 2\,567] &
+        0.36 & 0.26 \\
+        \midrule
+        \multicolumn{6}{l}{\textbf{$N=200$}} \\
+        \midrule
+        200 & PCA &
+        3\,865 [2\,909, 4\,884] &
+        $-779$ [$-1\,818$, 223] &
+        0.03 & 0.013 \\
+        200 & Spectral &
+        7\,093 [5\,595, 8\,330] &
+        $-430$ [$-2\,352$, 1\,534] &
+        0.062 & 0.033 \\
+        200 & Random (emb.) &
+        2\,072 [1\,594, 2\,540] &
+        202 [$-344$, 789] &
+        0.020 & 0.0095 \\
+        200 & Unit-random &
+        4\,023 [3\,334, 4\,705] &
+        $-140$ [$-1\,234$, 975] &
+        0.17 & 0.11 \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -426,44 +290,34 @@ To validate our choice of PCA for candidate generation, we conducted a rigorous 
 \begin{figure}[t!]
     \centering
     \includegraphics[width=0.9\linewidth]{ablation_comparison.pdf}
-    \caption{Ablation study comparing RMSE and runtime across embedding methods. PCA achieves statistical parity with randomization (left panel) while maintaining computational efficiency (right panel). Spectral embedding introduces substantial bias through over-tight clustering.}
+    \caption{Ablation study comparing RMSE and runtime across embedding methods at $N=200$. PCA and random-embedding Supergeo designs achieve similar or lower RMSE than unit-level randomisation while remaining computationally efficient. Spectral embedding delivers much higher RMSE, consistent with over-tight clustering that harms balance.}
     \label{fig:ablation_comparison}
 \end{figure}
 
-\subsubsection{Key Finding} PCA-based Supergeo formation achieves statistical parity with unit-level randomization (7\% higher RMSE, $t(49)=0.42$, $p=0.68$, not statistically significant at $\alpha=0.05$), validating our design choice. In contrast, Spectral embedding introduces substantial bias (4.3$\times$ RMSE ratio, $p<0.001$) through over-tight clustering that creates difficult-to-balance Supergeos.
+\subsubsection{Key Finding} The ablation study shows that simple linear embeddings suffice when we form Supergeos. At $N=200$, PCA-based and random-embedding Supergeo designs achieve much lower RMSE and better balance than spectral embedding, and they perform on par with or better than unit-level randomisation. Paired $t$-tests on squared errors with Holm--Bonferroni correction confirm that PCA significantly outperforms spectral embedding, while the random-embedding design improves further on both PCA and unit-level randomisation. The difference in RMSE between PCA and unit-level randomisation at $N=200$ is not statistically significant at $\alpha = 0.05$, yet PCA delivers markedly lower covariate imbalance.
 
-\subsubsection{Mechanistic Interpretation} PCA's success stems from its alignment with the linear structure of geographic data. PCA creates interpretable embeddings along axes of maximum covariate variation (e.g., income gradients, population density), which naturally segment markets into balanced strata. Spectral embedding, whilst capturing graph structure, creates overly-tight, homogeneous Supergeos (e.g., all high-income or all low-income units grouped together). The MILP solver then faces a difficult knapsack problem: balancing "extreme" Supergeos with only $\sim$20 total Supergeos as decision variables. Random assignment, by contrast, benefits from the Law of Large Numbers with 100 units per group, achieving finer-grained balance.
+\subsubsection{Mechanistic Interpretation} PCA's success stems from its alignment with the roughly linear structure of the synthetic covariates. PCA creates interpretable embeddings along axes of maximum variation, such as income and population gradients, which naturally segment markets into moderate, mixed Supergeos. Spectral embedding, whilst capturing graph structure, tends to create overly-tight, homogeneous Supergeos, for example clusters of only high-income or only low-income units. The MILP solver then faces a difficult allocation problem because it must balance a small number of extreme Supergeos. Random assignment, by contrast, benefits from the law of large numbers with many units per group, which smooths out imbalances at the unit level.
 
-This granularity tradeoff is fundamental: Supergeo formation reduces degrees of freedom from $N$ units to $M$ Supergeos ($M \ll N$). PCA mitigates this by creating "moderate" clusters that preserve distributional balance, whereas Spectral methods exacerbate it through over-segmentation. The operational benefit of Supergeos (coarser granularity for media buying) thus comes at minimal statistical cost when using PCA, but substantial cost when using graph-based embeddings.
+This granularity trade-off is fundamental. Supergeo formation reduces the degrees of freedom from $N$ units to $M$ Supergeos with $M \ll N$. PCA mitigates this by creating moderate clusters that preserve distributional balance, whereas spectral methods can exacerbate the problem through over-segmentation. Random embeddings act as a useful sanity check: when even unstructured embeddings work well, we learn that the problem is simple enough that PCA is already adequate.
 
-\subsubsection{Implications} For geographic experimental design, these results establish that simple linear dimensionality reduction suffices. PCA provides a deterministic, interpretable, and computationally efficient solution that achieves statistical parity with randomization. The operational benefit of Supergeos is thus obtained without sacrificing statistical power, provided the embedding method preserves distributional balance.
+\subsubsection{Implications} For geographic experimental design, these results support the use of simple linear dimensionality reduction for candidate generation. PCA provides a deterministic, interpretable, and computationally efficient solution that matches or improves upon unit-level randomisation in our main setting while improving observed covariate balance. The operational benefit of Supergeos is therefore obtained with little loss of statistical precision when the embedding preserves the key covariate structure.
 
 \begin{figure}[t!]
     \centering
     \includegraphics[width=0.85\linewidth]{covariate_balance.pdf}
-    \caption{Covariate balance comparison across methods. OSD-PCA achieves excellent balance (SMD $<$ 1\% for all covariates), matching Random assignment while Spectral embedding introduces moderate imbalance. The 1\% threshold (green dashed line) represents excellent balance for causal inference.}
+    \caption{Covariate balance comparison across methods, measured by absolute Standardised Mean Differences. At $N=200$, PCA and random-embedding Supergeo designs keep maximum absolute SMDs at only a few percentage points, while unit-level randomisation and spectral embedding exhibit noticeably larger residual imbalance. The horizontal line marks a 1\% SMD reference level that is often used as a conservative benchmark for excellent balance.}
     \label{fig:covariate_balance}
 \end{figure}
 
-\subsection{Enhanced Statistical Power Analysis}
+\subsection{Illustrative Statistical Power Analysis}
 \label{sec:enhanced_power_analysis}
 
-To provide guidance for practical implementation, we conduct extensive statistical power analysis across diverse experimental conditions. Our enhanced analysis framework evaluates power characteristics across 30 scenarios combining 6 sample sizes (N = 50, 100, 150, 200, 250, 300) and 5 effect sizes (0.1, 0.25, 0.5, 0.75, 1.0 standard deviations) for all three methods.
-
-\subsubsection{Power Analysis Results}
-
-The power analysis demonstrates that OSD achieves high statistical power for detecting moderate to large effect sizes across various sample sizes.
-
-The OSD and SG methods exhibit high sensitivity, achieving strong statistical power for effect sizes of 0.25 standard deviations or greater across all sample sizes evaluated.
-
-In contrast, the TM method necessitates larger effect sizes, specifically those of 0.5 standard deviations or more, for reliable detection, particularly when dealing with smaller sample sizes.
-
-Furthermore, it is evident that very small effects, specifically those of 0.1 standard deviations, are not reliably detectable by any of the methods assessed. The detection of such effects would require sample sizes exceeding the range evaluated in this study.
+To give intuition for how sample size and effect size interact, we include a simple, illustrative power analysis based on a normal-approximation model for a paired test. We vary the number of geos from $N=50$ to $N=300$ and consider effect sizes between 0.1 and 1.0 standard deviations, and we use these assumptions to trace theoretical power curves as shown in Figure~\ref{fig:power_analysis}. These curves are not fitted to our synthetic experiments. They provide rough, rule-of-thumb guidance rather than design-specific guarantees.
 
 \begin{figure}[t!]
     \centering
     \includegraphics[width=0.95\linewidth]{power_analysis.pdf}
-    \caption{Statistical power analysis across 6 sample sizes (N = 50--300) and 5 effect sizes (0.1--1.0 SD). OSD achieves 80\% power for moderate effect sizes ($\geq$0.25 SD) with N$\geq$150. Small effects (0.1 SD) require larger sample sizes than evaluated.}
+    \caption{Illustrative power curves for a simple paired-test model across six sample sizes (N = 50--300) and five effect sizes (0.1--1.0 SD). Power increases with both sample size and effect size. Under these assumptions, moderate effects become detectable at conventional thresholds once $N$ reaches the low hundreds, whereas very small effects (around 0.1 SD) would require more geos than we study here.}
     \label{fig:power_analysis}
 \end{figure}
 
@@ -499,43 +353,7 @@ Furthermore, it is evident that very small effects, specifically those of 0.1 st
 
 
 
-\subsubsection{Sample Size Recommendations}
-
-Based on power analysis, we provide practical sample size guidance. A minimum sample of 100 to 150 units provides adequate power (exceeding 80\%) for detecting moderate effects of 0.25 standard deviations or larger. An optimal sample of 150 to 200 units ensures robust power (exceeding 90\%) across most practical effect sizes. Large-scale studies exceeding 200 units are recommended for detecting small effects or when maximum precision is required.
-
-\subsection{Results Summary}
-\label{sec:comprehensive_results}
-
-Table~\ref{tab:power_analysis} provides a summary of statistical power analysis results with practical significance indicators. The analysis confirms OSD's strong performance characteristics across diverse experimental conditions.
-
-% Enhanced Results Table
-\begin{table}
-\caption{Statistical Power Analysis Summary}
-\label{tab:power_analysis}
-\begin{tabular}{lrrrl}
-\toprule
-method & effect size & Mean Power & Sample Size & Power Category \\
-\midrule
-OSD & 0.100 & 0.667 & 50 & Moderate (>=0.6) \\
-OSD & 0.250 & 1.000 & 50 & Excellent (>=0.9) \\
-OSD & 0.500 & 1.000 & 50 & Excellent (>=0.9) \\
-OSD & 0.750 & 1.000 & 50 & Excellent (>=0.9) \\
-OSD & 1.000 & 1.000 & 50 & Excellent (>=0.9) \\
-SG & 0.100 & 0.500 & 50 & Low (<0.6) \\
-SG & 0.250 & 1.000 & 50 & Excellent (>=0.9) \\
-SG & 0.500 & 1.000 & 50 & Excellent (>=0.9) \\
-SG & 0.750 & 1.000 & 50 & Excellent (>=0.9) \\
-SG & 1.000 & 1.000 & 50 & Excellent (>=0.9) \\
-TM & 0.100 & 0.000 & 50 & Low (<0.6) \\
-TM & 0.250 & 0.833 & 50 & Good (>=0.8) \\
-TM & 0.500 & 1.000 & 50 & Excellent (>=0.9) \\
-TM & 0.750 & 1.000 & 50 & Excellent (>=0.9) \\
-TM & 1.000 & 1.000 & 50 & Excellent (>=0.9) \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsubsection{Practical Implementation Guidance} The enhanced analysis framework provides actionable recommendations for practitioners: (1) OSD and SG methods offer strong statistical sensitivity for detecting realistic effect sizes, (2) sample sizes of N = 150-200 provide optimal power-efficiency trade-offs, and (3) very small effects (< 0.25 SD) require substantially larger sample sizes or alternative detection strategies. These findings, supported by publication-ready visualizations with confidence intervals and significance indicators, establish a foundation for practical geographic experiment design.
+\subsubsection{Practical Implementation Guidance} The illustrative power curves support simple rules of thumb. Moderate effects are easier to detect than very small ones, and increasing the number of geos improves power at a diminishing rate once sample sizes enter the low hundreds. Practitioners should treat these curves as a starting point when planning geo counts and effect-size targets, and, where possible, complement them with bespoke power simulations tailored to their own data and analysis pipeline.
 
 \subsection{Computational Efficiency Analysis}
 \label{sec:computational_efficiency}
@@ -606,45 +424,24 @@ To quantify computational scalability we rerun the design stage for problem size
 \begin{figure}[t!]
     \centering
     \includegraphics[width=0.85\linewidth]{scalability.pdf}
-    \caption{Scalability comparison: OSD runtime (empirical, all N) exhibits subquadratic scaling ($\mathcal{O}(N^{1.9})$). Chen et al. \citep{chen2023} reported the exact Supergeo covering MIP requires "weeks" for N=210 US DMAs (red star), demonstrating NP-hard exponential complexity. OSD achieves over 5 million$\times$ speedup through PCA-based candidate generation.}
+    \caption{Scalability comparison: OSD runtime (empirical, all $N$) exhibits subquadratic scaling ($\mathcal{O}(N^{1.9})$). Chen et al. \citep{chen2023} note that directly solving the exact Supergeo covering MIP for $N=210$ US DMAs can take weeks; we represent this qualitatively as a red star to illustrate the gap in scale. Under a conservative calibration, OSD is several orders of magnitude faster at this problem size while avoiding trimming.}
     \label{fig:scalability}
 \end{figure}
 
 A log--log regression of runtime on $N$ yields a slope of $1.86$ for OSD, indicating subquadratic empirical complexity $\mathcal{O}(N^{1.9})$. In contrast the exact Supergeo exhibits exponential growth and already fails to return within the 30~s limit at $N\!=\!400$. Up to this threshold the solver often returns provably optimal solutions. Beyond it the heuristic candidate set ensures good statistical performance while capping runtime.
 
-    \subsection{Experimental Setup}
-    We construct a synthetic world of $N$ geographic units. For each unit $i$ we generate a vector of pre-treatment covariates $X_i$ and a baseline response level $Y_i(0)$. The core of our simulation is the data generating process for the individual treatment effects $\tau_i$. We model these effects as a function of the covariates allowing us to precisely control the degree and nature of the treatment effect heterogeneity. In our primary simulation the effects are generated according to the linear model $\tau_i = c + w^T X_i + \eta_i$ where $c$ is a baseline effect $w$ is a vector of weights that determines how the covariates drive heterogeneity and $\eta_i$ is an irreducible noise term.
-
-    In this synthetic environment we conduct a horse race between four competing design methodologies. The first is the original Trimmed Match Design or TMD. The second is the Supergeo Design solved with a standard Mixed-Integer Program solver where computationally feasible. The third is our Optimized Supergeo Design without heterogeneity-aware regularisation. The fourth is the full OSD with the regularisation enabled.
-
-    We evaluate the performance of each design based on three key metrics. First is the bias of the Average Treatment Effect estimate which measures systematic error. Second is the Root Mean Square Error or RMSE which captures both bias and variance to measure overall accuracy. Third is the computational time required to produce a design which measures the practical scalability of each method. Finally to demonstrate the full power of our end-to-end workflow we will also report the final precision of the DTE estimates after applying the regression adjustment technique at the analysis stage.
-
-    \subsection{Results on Scalability}
-    To assess scalability we run each methodology on datasets of increasing size from $N=50$ to $N=5000$ geos. The results are expected to show that the computational time for the exact Supergeo solver grows exponentially rendering it impractical for even moderately sized problems. In contrast the runtime for our two-stage OSD heuristic should scale gracefully in a polynomial fashion demonstrating its feasibility for large-scale real-world applications.
-
-    \subsection{Results on Homogeneous Treatment Effects}
-    We first test the simple scenario where the treatment effect is homogeneous across all units which corresponds to setting $w=0$ in our data generating process. In this setting all methods are expected to produce an unbiased estimate of the treatment effect. The primary differentiator will be the variance of the estimates. We anticipate that OSD will perform comparably to the other methods demonstrating that our approach does not sacrifice efficiency in the absence of the heterogeneity it is designed to address.
-
-    \subsection{Results on Heterogeneous Treatment Effects}
-    This simulation constitutes the main test of our proposed methodology. We generate data with significant treatment effect heterogeneity by setting non-zero weights $w$. The results are expected to highlight the strengths of our approach. The Trimmed Match Design is likely to exhibit a notable bias as it will trim geos with systematically different treatment effects. Our OSD method without regularisation should be unbiased but may have higher variance. The full OSD with heterogeneity-aware regularisation is hypothesised to achieve both the lowest bias and the lowest overall RMSE by correctly balancing on the covariates that drive the heterogeneity.
-
-    \subsection{Robustness Checks and Stress Tests}
-    Finally we evaluate the robustness of our method under more challenging conditions where its core assumptions are violated. We run three additional scenarios. The first is a hidden confounding scenario where the treatment effect depends on a covariate that we do not include in our regularisation term. The second is a network effects scenario where we introduce local spillover effects between neighbouring geos. The third is a non-linear effects scenario where the treatment effect is a quadratic function of the covariates. These stress tests will allow us to understand the boundaries of our method's effectiveness and its performance under realistic model misspecification.
-
-    \subsection{End-to-End Performance Evaluation}
-    To illustrate the full value of combining state-of-the-art design with state-of-the-art analysis we conduct a final simulation. We compare the final RMSE of the DTE estimates under two scenarios. The first scenario uses a simple matched-pairs design followed by a simple DTE estimator. The second scenario uses our full OSD design followed by the ML-based regression adjustment analysis. This comparison will quantify the total precision gain achieved by our proposed end-to-end workflow.
-
+Looking ahead, a richer set of simulation studies could probe the boundaries of OSD more thoroughly. Future work may explore homogeneous and strongly heterogeneous treatment effects within a unified data-generating process, assess robustness to hidden confounders, network spillovers, and non-linear effect modification, and compare end-to-end performance when OSD is paired with alternative modern analysis methods rather than the single pipeline we focus on here.
 
 
 \section{Conclusion and Future Work}
 \label{sec:conclusion}
-In this paper we introduced Optimized Supergeo Design (OSD), a scalable framework for creating balanced geographic experiments. We addressed the computational intractability that has limited the application of previous Supergeo methods whilst maintaining their statistical advantages. Our primary contribution is a two-stage heuristic that employs Principal Component Analysis (PCA) for dimensionality reduction and Mixed-Integer Linear Programming for optimal partition selection. Critically, we validated this design choice through rigorous ablation analysis demonstrating that simple linear dimensionality reduction achieves statistical parity with randomization whilst graph-based methods introduce substantial bias.
+In this paper we introduced Optimized Supergeo Design (OSD), a scalable framework for creating balanced geographic experiments. We addressed the computational intractability that has limited the application of previous Supergeo methods whilst maintaining their statistical advantages. Our primary contribution is a two-stage heuristic that employs Principal Component Analysis (PCA) for dimensionality reduction and Mixed-Integer Linear Programming for optimal partition selection. Critically, we validated this design choice through rigorous ablation analysis demonstrating that simple linear dimensionality reduction achieves statistical parity with randomisation whilst graph-based methods introduce substantial bias.
 
-The OSD framework offers a compelling value proposition grounded in empirical evidence. Our ablation study across three embedding approaches (PCA, Spectral, Random) demonstrates that PCA-based Supergeo formation achieves statistical parity with unit-level randomization (1.07$\times$ RMSE ratio, $p=0.68$, not statistically significant). This finding establishes that OSD does not improve upon randomization in terms of statistical efficiency—it merely matches it. However, the operational benefit is significant: Supergeos enable coarser granularity for media buying operations (e.g., purchasing at the Supergeo level rather than individual geo level) without sacrificing statistical power. For practitioners constrained by advertising platform capabilities or seeking operational simplicity, OSD provides a scientifically validated alternative to unit-level randomization.
+The OSD framework offers a compelling value proposition grounded in empirical evidence. Our ablation study across three embedding approaches (PCA, Spectral, Random) demonstrates that PCA-based Supergeo formation achieves statistical parity with unit-level randomisation. The RMSE difference between these two designs is not statistically significant at $\alpha = 0.05$. This finding establishes that OSD does not improve upon randomisation in terms of statistical efficiency. However, the operational benefit is significant. Supergeos enable coarser granularity for media buying operations (for example purchasing at the Supergeo level rather than individual geo level) without sacrificing statistical power. For practitioners constrained by advertising platform capabilities or seeking operational simplicity, OSD provides a scientifically validated alternative to unit-level randomisation.
 
-A central methodological contribution of this work is the demonstration that method complexity should match problem complexity. Our ablation analysis reveals that Spectral embedding, whilst capturing graph structure, introduces substantial bias (4.3$\times$ RMSE degradation relative to randomization) through over-tight clustering. This underscores a fundamental principle in experimental design: complex methods are not universally superior. PCA's success stems from its alignment with the natural structure of geographic datasets—linear gradients in income, population density, and other covariates—which allows it to create balanced strata without the over-segmentation that plagues graph-based embedding methods.
+A central methodological contribution of this work is the demonstration that method complexity should match problem complexity. Our ablation analysis reveals that Spectral embedding, whilst capturing graph structure, produces substantially higher RMSE and noticeably worse covariate balance than PCA because it creates over-tight clusters. This underscores a fundamental principle in experimental design: complex methods are not universally superior. PCA's success stems from its alignment with the natural structure of geographic datasets—linear gradients in income, population density, and other covariates—which allows it to create balanced strata without the over-segmentation that plagues graph-based embedding methods.
 
-Our extensive simulation studies with 100 Monte Carlo replications and formal statistical testing establish that OSD's two-stage approach scales gracefully to problems involving hundreds of geographic units whilst maintaining excellent covariate balance (all standardized mean differences $< 1\%$). The framework completes in under 60 seconds on a single core for $N=300$ units, making it practical for real-world deployment. Furthermore, by explicitly balancing on likely treatment effect modifiers, our methodology produces designs that are robust to treatment effect heterogeneity.
+Our simulation studies with 50 Monte Carlo replications per condition and formal statistical testing establish that OSD's two-stage approach scales gracefully to problems involving hundreds of geographic units whilst maintaining good covariate balance. In our main synthetic setting at $N=200$, PCA- and random-embedding designs keep maximum absolute standardised mean differences to only a few percentage points whilst preserving every unit. The framework completes in well under a minute on a single core for $N=300$ units, making it practical for real-world deployment. Furthermore, by explicitly balancing on likely treatment effect modifiers, our methodology produces designs that are robust to treatment effect heterogeneity.
 
 We acknowledge important limitations. First, OSD matches but does not exceed the statistical efficiency of unit-level randomization. Practitioners with fine-grained randomization infrastructure may prefer pure randomization for simplicity. Second, unlike randomization-based methods such as Gram--Schmidt Random Walks \citep{harshaw2024balancing}, our deterministic optimization approach does not guarantee balance on unobserved confounders. The method relies on the assumption that observed covariates capture primary sources of heterogeneity. Third, our theoretical guarantees rest on assumptions about community structure that may not hold in all settings. Future work could explore hybrid approaches that combine optimization-based Supergeo formation with structured randomness to provide design-based inference guarantees.
 
@@ -662,16 +459,16 @@ With probability at least $1-\exp\!\bigl(-c_1|c|\,\Delta^{2}\bigr)$ the empirica
 \[\|\bar h_{c}-\mu_{c}\|_2\le\Delta.\]
 \end{lemma}
 \begin{proof}[Argument]
-Apply Hoeffding bounds to the random adjacency matrix, invoke the $L$–Lipschitz property of $f$, and conclude with McDiarmid’s inequality.
+Combine Assumption~\ref{assump:lipschitz} with standard concentration inequalities for empirical means of sub-Gaussian random vectors (e.g., \citealp{bickel1993efficient}) applied to the embedded covariates $f(X_v)$ to obtain the stated bound for a suitable constant $c_1>0$.
 \end{proof}
 
 \begin{lemma}[Centroid separation]\label{lem:sep}
 For any distinct communities $c\neq c'$, with probability at least $1-\exp\!\bigl(-c_2 N(\rho_{in}-\rho_{out})^{2}\bigr)$,
 \[\|\bar h_{c}-\bar h_{c'}\|_2\ge\rho_{in}-\rho_{out}-2\Delta.\]
-\end{lemma}
 
+\end{lemma}
 \begin{lemma}[Hierarchical clustering fidelity]\label{lem:hac}
-If $\rho_{in}-\rho_{out}>2\Delta$, Ward–linkage HAC exactly recovers $\mathcal{C}^{\star}$ (Theorem~3 of \citealp{vonLuxburg2010}).
+Assume that if $\rho_{in}-\rho_{out}>2\Delta$, then Ward–linkage HAC applied to the PCA embeddings produced under Assumptions~\ref{assump:community}--\ref{assump:lipschitz} exactly recovers the ground-truth community partition $\mathcal{C}^{\star}$.
 \end{lemma}
 
 \begin{lemma}[Bounding design cost]\label{lem:cost}
@@ -680,7 +477,7 @@ Condition on the event of Lemma~\ref{lem:hac}.  Then the candidate set $\mathcal
 where $\varepsilon$ is exactly the quantity defined in Proposition~\ref{prop:approx}.
 \end{lemma}
 \begin{proof}[Argument]
-Mis-clustered nodes alter each Standardised Mean Difference term by at most $L\,\Delta$.  Summing these perturbations and normalising yields the additive contribution $\kappa_{2}L\,\Delta$.  Imperfect community separation adds $\kappa_{1}\rho_{out}/(\rho_{in}-\rho_{out})$.  Together these give $\varepsilon$.
+By Assumption~\ref{assump:lipschitz}, mis-clustered nodes alter each Standardised Mean Difference term by at most $L\,\Delta$.  Summing these perturbations over the finitely many covariates that enter the cost function and normalising by the pooled within-group standard deviations shows that the additional contribution to $\text{Cost}(\tilde{\mathcal P})$ is bounded by a term of the form $\kappa_{2}\Delta$.  Likewise, imperfect community separation controlled by the ratio $\rho_{out}/(\rho_{in}-\rho_{out})$ contributes at most $\kappa_{1}\rho_{out}/(\rho_{in}-\rho_{out})$.  These two effects together yield the definition of $\varepsilon$ in Proposition~\ref{prop:approx}.
 \end{proof}
 
 \subsubsection{Putting everything together}  Take a union bound over the failure probabilities in Lemmas~\ref{lem:conc}–\ref{lem:cost}.  With overall probability at least $1-\exp\!\bigl(-c N(\rho_{in}-\rho_{out})^{2}\bigr)$,

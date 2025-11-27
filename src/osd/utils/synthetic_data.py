@@ -3,7 +3,7 @@ from typing import List
 from osd.utils.data_structures import GeoUnit
 
 def generate_synthetic_data(n_units=200, effect_size=0.1, heterogeneity=0.5, 
-                          spatial_confounding=0.0, non_linear_effect=False) -> List[GeoUnit]:
+                          spatial_confounding=0.0, non_linear_effect=False, seed=None) -> List[GeoUnit]:
     """
     Generates synthetic geographic data with optional adversarial features.
     
@@ -15,8 +15,10 @@ def generate_synthetic_data(n_units=200, effect_size=0.1, heterogeneity=0.5,
                              0.0 = No unobserved confounding
                              1.0 = Heterogeneity driven entirely by unobserved spatial variable
         non_linear_effect: If True, treatment effect depends on quadratic/interaction terms
+        seed: Random seed for reproducibility (optional). If None, uses current random state.
     """
-    np.random.seed(42)
+    if seed is not None:
+        np.random.seed(seed)
     
     # 1. Geography (Lat/Long) for spatial correlation
     # Generate points in a 2D grid [0,1]x[0,1]
